@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from db import Database
-from game import create_game, fetch_game_scores
+from game import create_game, fetch_missing_games_scores
 
 load_dotenv()
 
@@ -55,7 +55,7 @@ async def leaderboard(ctx):
 
 
 schedule.every().day.at("07:00").do(create_game)
-schedule.every().day.at("23:30").do(fetch_game_scores)
+schedule.every().day.at("23:30").do(fetch_missing_games_scores)
 schedule.every().day.at("23:45").do(post_todays_scores)
 
 bot.run(os.getenv("DISCORD_TOKEN"))

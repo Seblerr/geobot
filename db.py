@@ -122,7 +122,7 @@ class Database:
     @staticmethod
     @contextmanager
     def db_connection():
-        con = sqlite3.connect("geobot.db")
+        con = sqlite3.connect("database.db")
         try:
             yield con
         finally:
