@@ -75,7 +75,9 @@ class Database:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
+            res = ""
             if game_id:
+                res += "Scores for today's game:\n"
                 cursor.execute(
                     """
                     SELECT player_name, score
@@ -86,6 +88,7 @@ class Database:
                     (game_id,),
                 )
             else:
+                res += "Overall leaderboard:\n"
                 cursor.execute(
                     """
                     SELECT player_name, SUM(score) AS total_score
@@ -99,7 +102,8 @@ class Database:
             if not scores:
                 return "No scores available for today's game."
 
-            return "\n".join(f"- {player}: {score}" for player, score in scores)
+            res += "\n".join(f"- {player}: {score}" for player, score in scores)
+            return res
 
     def get_todays_scores(self):
         game_id = self.get_latest_game()
