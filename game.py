@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 from db import Database
 from dotenv import load_dotenv
 
@@ -35,7 +36,7 @@ def create_game():
         session.close()
 
 
-def fetch_scores(game_id=None):
+def fetch_game_scores(game_id):
     load_dotenv()
     session = requests.Session()
 
@@ -43,22 +44,22 @@ def fetch_scores(game_id=None):
         token = os.getenv("GEOGUESSR_NCFA")
         session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
 
-        print(token)
-
         db = Database()
-        if game_id is None:
-            game_id = db.get_latest_game()
-        url = f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
-        print(url)
         res = session.get(
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
-        print(res)
         assert res.status_code == 200
         items = res.json()["items"]
         scores = [(item["playerName"], item["totalScore"]) for item in items]
 
-        db.add_game(game_id)
         db.add_scores(scores)
     finally:
         session.close()
+
+
+def fetch_missing_games_scores():
+    db = Database()
+    game_ids = db.get_missing_game_ids()
+    for game_id in game_ids:
+        fetch_game_scores(game_id)
+        time.sleep(30)

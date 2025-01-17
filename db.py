@@ -58,6 +58,19 @@ class Database:
             conn.commit()
             print("Scores added to the database.")
 
+    def get_missing_game_ids(self):
+        with self.db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT g.game_id
+                FROM games g
+                LEFT JOIN scores s ON g.game_id = s.game_id
+                WHERE s.game_id IS NULL
+                """
+            )
+            return [row[0] for row in cursor.fetchall()]
+
     def get_scores(self, game_id=None):
         with self.db_connection() as conn:
             cursor = conn.cursor()
