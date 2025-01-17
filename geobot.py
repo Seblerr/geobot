@@ -1,6 +1,8 @@
 import os
 import asyncio
 import discord
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from db import Database
@@ -17,9 +19,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 db = Database()
 
 
+def get_swedish_time():
+    return datetime.now(ZoneInfo("Europe/Stockholm"))
+
+
 @tasks.loop(hours=24)
 async def create_game_task():
-    now = discord.utils.utcnow()
+    now = get_swedish_time()
     if now.hour == 7 and now.minute == 0:
         link = create_game()
         print(f"Game created: {link}")
@@ -27,15 +33,17 @@ async def create_game_task():
 
 @tasks.loop(hours=24)
 async def fetch_scores_task():
-    now = discord.utils.utcnow()
+    now = get_swedish_time()
     if now.hour == 23 and now.minute == 30:
+        print("Fetching missing game scores...")
         await asyncio.to_thread(fetch_missing_games_scores)
 
 
 @tasks.loop(hours=24)
 async def post_scores_task():
-    now = discord.utils.utcnow()
+    now = get_swedish_time()
     if now.hour == 23 and now.minute == 45:
+        print("Posting scores...")
         channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
         channel = await bot.fetch_channel(channel_id)
         scores = db.get_todays_scores()
