@@ -19,35 +19,28 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 db = Database()
 
 
-def get_swedish_time():
-    return datetime.now(ZoneInfo("Europe/Stockholm"))
+swedish_timezone = ZoneInfo("Europe/Stockholm")
 
 
-@tasks.loop(hours=24)
+@tasks.loop(time=datetime.time(hour=7, tzinfo=swedish_timezone))
 async def create_game_task():
-    now = get_swedish_time()
-    if now.hour == 7 and now.minute == 0:
-        link = create_game()
-        print(f"Game created: {link}")
+    link = create_game()
+    print(f"Game created: {link}")
 
 
-@tasks.loop(hours=24)
+@tasks.loop(time=datetime.time(hour=23, minute=45, tzinfo=swedish_timezone))
 async def fetch_scores_task():
-    now = get_swedish_time()
-    if now.hour == 23 and now.minute == 30:
-        print("Fetching missing game scores...")
-        await asyncio.to_thread(fetch_missing_games_scores)
+    print("Fetching missing game scores...")
+    await asyncio.to_thread(fetch_missing_games_scores)
 
 
-@tasks.loop(hours=24)
+@tasks.loop(time=datetime.time(hour=23, minute=55, tzinfo=swedish_timezone))
 async def post_scores_task():
-    now = get_swedish_time()
-    if now.hour == 23 and now.minute == 45:
-        print("Posting scores...")
-        channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
-        channel = await bot.fetch_channel(channel_id)
-        scores = db.get_todays_scores()
-        await channel.send(scores)
+    print("Posting scores...")
+    channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
+    channel = await bot.fetch_channel(channel_id)
+    scores = db.get_todays_scores()
+    await channel.send(scores)
 
 
 @bot.event
