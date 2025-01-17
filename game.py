@@ -1,6 +1,7 @@
 import os
 import requests
 import time
+import asyncio
 from db import Database
 from dotenv import load_dotenv
 
@@ -36,7 +37,7 @@ def create_game():
         session.close()
 
 
-def fetch_game_scores(game_id):
+async def fetch_game_scores(game_id):
     load_dotenv()
     session = requests.Session()
 
@@ -57,9 +58,9 @@ def fetch_game_scores(game_id):
         session.close()
 
 
-def fetch_missing_games_scores():
+async def fetch_missing_games_scores():
     db = Database()
     game_ids = db.get_missing_game_ids()
     for game_id in game_ids:
         fetch_game_scores(game_id)
-        time.sleep(30)
+        asyncio.sleep(30)
