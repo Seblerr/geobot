@@ -100,7 +100,9 @@ class Database:
             if not scores:
                 return "No scores available for today's game."
 
-            res += "\n".join(f"- {player}: {score}" for player, score in scores)
+            res += "\n".join(
+                f"- {player}: {score:,}".replace(",", " ") for player, score in scores
+            )
             return res
 
     def get_todays_scores(self):
