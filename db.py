@@ -9,7 +9,8 @@ class Database:
 
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS games (
-                game_id TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT UNIQUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """)
@@ -38,7 +39,7 @@ class Database:
     def get_latest_game(self):
         with self.db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT game_id FROM games ORDER BY created_at DESC LIMIT 1")
+            cursor.execute("SELECT game_id FROM games ORDER BY id DESC LIMIT 1")
             result = cursor.fetchone()
             if result:
                 return result[0]
