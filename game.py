@@ -1,6 +1,5 @@
 import os
 import requests
-import time
 import asyncio
 from db import Database
 from dotenv import load_dotenv

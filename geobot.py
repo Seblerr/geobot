@@ -1,8 +1,7 @@
 import os
 import asyncio
 import discord
-from datetime import datetime
-from zoneinfo import ZoneInfo
+import datetime
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from db import Database
@@ -19,22 +18,24 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 db = Database()
 
 
-swedish_timezone = ZoneInfo("Europe/Stockholm")
+def set_time(hour, minute):
+    tz = datetime.datetime.now().astimezone().tzinfo
+    return datetime.time(hour=hour, minute=minute, tzinfo=tz)
 
 
-@tasks.loop(time=datetime.time(hour=7, tzinfo=swedish_timezone))
+@tasks.loop(time=set_time(7, 0))
 async def create_game_task():
     link = create_game()
     print(f"Game created: {link}")
 
 
-@tasks.loop(time=datetime.time(hour=23, minute=45, tzinfo=swedish_timezone))
+@tasks.loop(time=set_time(23, 45))
 async def fetch_scores_task():
     print("Fetching missing game scores...")
     await asyncio.to_thread(fetch_missing_games_scores)
 
 
-@tasks.loop(time=datetime.time(hour=23, minute=55, tzinfo=swedish_timezone))
+@tasks.loop(time=set_time(23, 59))
 async def post_scores_task():
     print("Posting scores...")
     channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
