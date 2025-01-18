@@ -52,7 +52,7 @@ async def fetch_game_scores(game_id):
         items = res.json()["items"]
         scores = [(item["playerName"], item["totalScore"]) for item in items]
 
-        db.add_scores(scores)
+        db.add_scores(game_id, scores)
     finally:
         session.close()
 

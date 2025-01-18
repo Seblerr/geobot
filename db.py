@@ -45,15 +45,12 @@ class Database:
             else:
                 return "No games found"
 
-    def add_scores(self, scoresheet):
+    def add_scores(self, game_id, scoresheet):
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.executemany(
                 "INSERT OR IGNORE INTO scores (game_id, player_name, score) VALUES (?, ?, ?)",
-                [
-                    (self.get_latest_game(), player, score)
-                    for player, score in scoresheet
-                ],
+                [(game_id, player, score) for player, score in scoresheet],
             )
             conn.commit()
             print("Scores added to the database.")
