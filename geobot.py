@@ -1,5 +1,4 @@
 import os
-import asyncio
 import discord
 import datetime
 from discord.ext import commands, tasks
@@ -26,7 +25,9 @@ def set_time(hour, minute):
 @tasks.loop(time=set_time(7, 0))
 async def create_game_task():
     link = create_game()
-    print(f"Game created: {link}")
+    channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
+    channel = await bot.fetch_channel(channel_id)
+    await channel.send(link)
 
 
 @tasks.loop(time=set_time(23, 45))
