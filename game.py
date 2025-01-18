@@ -61,5 +61,5 @@ async def fetch_missing_games_scores():
     db = Database()
     game_ids = db.get_missing_game_ids()
     for game_id in game_ids:
-        fetch_game_scores(game_id)
-        asyncio.sleep(30)
+        await fetch_game_scores(game_id)
+        await asyncio.sleep(30)

@@ -32,7 +32,7 @@ async def create_game_task():
 @tasks.loop(time=set_time(23, 45))
 async def fetch_scores_task():
     print("Fetching missing game scores...")
-    await asyncio.to_thread(fetch_missing_games_scores)
+    await fetch_missing_games_scores()
 
 
 @tasks.loop(time=set_time(23, 59))
