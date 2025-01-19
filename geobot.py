@@ -74,6 +74,13 @@ async def today(ctx):
 
 
 @bot.command()
+async def week(ctx):
+    await fetch_missing_games_scores()
+    scores = db.get_week_scores()
+    await ctx.send(scores)
+
+
+@bot.command()
 async def leaderboard(ctx):
     scores = db.get_total_scores()
     await ctx.send(scores)

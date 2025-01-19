@@ -1,4 +1,5 @@
 import sqlite3
+import datetime
 from contextlib import contextmanager
 
 
@@ -98,6 +99,34 @@ class Database:
                 return "No scores available for today's game."
 
             table = self.format_table(scores, game_id)
+            return table
+
+    def get_week_scores(self):
+        with self.db_connection() as conn:
+            cursor = conn.cursor()
+
+            today = datetime.date.today()
+            monday = today - datetime.timedelta(days=today.weekday())
+            friday = monday + datetime.timedelta(days=4)
+
+            cursor.execute(
+                """
+                SELECT player_name, SUM(score) AS total_score, COUNT(DISTINCT scores.game_id) AS games_played
+                FROM scores
+                JOIN games ON scores.game_id = games.game_id
+                WHERE DATE(games.created_at) BETWEEN ? AND ?
+                GROUP BY player_name
+                ORDER BY total_score DESC
+                """,
+                (monday, friday),
+            )
+
+            scores = cursor.fetchall()
+
+            if not scores:
+                return "No scores available for this week's games."
+
+            table = self.format_table(scores)
             return table
 
     def get_todays_scores(self):
