@@ -56,7 +56,14 @@ async def on_ready():
 @bot.command()
 async def generate(ctx):
     link = create_game()
-    await ctx.send(link)
+    message = await ctx.send(link)
+
+    pinned_messages = await ctx.channel.pins()
+    if pinned_messages:
+        await pinned_messages[0].unpin()
+
+    await message.pin()
+    await ctx.send("Game link pinned! 📌")
 
 
 @bot.command()
