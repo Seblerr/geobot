@@ -98,6 +98,7 @@ class Database:
                 return "No scores available for today's game."
 
             table = self.format_table(scores, game_id)
+            print(table)
             return table
 
     def get_todays_scores(self):
@@ -110,11 +111,13 @@ class Database:
     def format_table(self, scores, game_id=None):
         if not game_id:
             title = "Overall Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}\n"
-            separator = "-" * 47 + "\n"
+            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}\n"
+            separator = "-" * 62 + "\n"
 
             rows = "\n".join(
-                f"{player:<20}{score:>10,}{games:>15}".replace(",", " ")
+                f"{player:<20}{score:>10,}{games:>15,}{score // games:>15,}".replace(
+                    ",", " "
+                )
                 for player, score, games in scores
             )
         else:
