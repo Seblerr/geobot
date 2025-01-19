@@ -98,7 +98,6 @@ class Database:
                 return "No scores available for today's game."
 
             table = self.format_table(scores, game_id)
-            print(table)
             return table
 
     def get_todays_scores(self):
