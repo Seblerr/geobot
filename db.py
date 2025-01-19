@@ -73,9 +73,7 @@ class Database:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
-            res = ""
             if game_id:
-                res += "Scores for today's game:\n"
                 cursor.execute(
                     """
                     SELECT player_name, score
@@ -86,10 +84,9 @@ class Database:
                     (game_id,),
                 )
             else:
-                res += "Overall leaderboard:\n"
                 cursor.execute(
                     """
-                    SELECT player_name, SUM(score) AS total_score
+                    SELECT player_name, SUM(score) AS total_score, count (DISTINCT game_id) as games_played
                     FROM scores
                     GROUP BY player_name
                     ORDER BY total_score DESC
@@ -100,10 +97,8 @@ class Database:
             if not scores:
                 return "No scores available for today's game."
 
-            res += "\n".join(
-                f"- {player}: {score:,}".replace(",", " ") for player, score in scores
-            )
-            return res
+            table = self.format_table(scores, game_id)
+            return table
 
     def get_todays_scores(self):
         game_id = self.get_latest_game()
@@ -111,6 +106,28 @@ class Database:
 
     def get_total_scores(self):
         return self.get_scores()
+
+    def format_table(self, scores, game_id=None):
+        if not game_id:
+            title = "Overall Leaderboard"
+            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}\n"
+            separator = "-" * 47 + "\n"
+
+            rows = "\n".join(
+                f"{player:<20}{score:>10,}{games:>15}".replace(",", " ")
+                for player, score, games in scores
+            )
+        else:
+            title = "Today's Leaderboard"
+            header = f"{'Player':<20}{'Score':>10}\n"
+            separator = "-" * 32 + "\n"
+
+            rows = "\n".join(
+                f"{player:<20}{score:>10,}".replace(",", " ")
+                for player, score in scores
+            )
+
+        return f"**{title}**\n\n```\n{header}{separator}{rows}\n```"
 
     def print_table(self, table_name):
         with self.db_connection() as conn:
