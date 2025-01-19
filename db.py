@@ -107,8 +107,6 @@ class Database:
 
     def get_todays_scores(self):
         game_id = self.get_latest_game()
-        if not game_id:
-            return "No game created today."
         return self.get_scores(game_id)
 
     def get_total_scores(self):

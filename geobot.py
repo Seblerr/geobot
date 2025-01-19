@@ -61,6 +61,7 @@ async def generate(ctx):
 
 @bot.command()
 async def today(ctx):
+    await fetch_missing_games_scores()
     scores = db.get_todays_scores()
     await ctx.send(scores)
 
