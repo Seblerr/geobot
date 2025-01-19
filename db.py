@@ -55,7 +55,8 @@ class Database:
                 [(game_id, player, score) for player, score in scoresheet],
             )
             conn.commit()
-            print("Scores added to the database.")
+            if cursor.rowcount > 0:
+                print("Scores added to the database.")
 
     def get_missing_game_ids(self):
         with self.db_connection() as conn:
