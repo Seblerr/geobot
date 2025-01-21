@@ -29,6 +29,13 @@ async def create_game_task():
     channel = await bot.fetch_channel(channel_id)
     await channel.send(link)
 
+    pinned_messages = await channel.pins()
+    if pinned_messages:
+        await pinned_messages[0].unpin()
+
+    message = await channel.send("Game link pinned! 📌")
+    await message.pin()
+
 
 @tasks.loop(time=set_time(23, 45))
 async def fetch_scores_task():
@@ -51,19 +58,6 @@ async def on_ready():
     create_game_task.start()
     fetch_scores_task.start()
     post_scores_task.start()
-
-
-@bot.command()
-async def generate(ctx):
-    link = create_game()
-    message = await ctx.send(link)
-
-    pinned_messages = await ctx.channel.pins()
-    if pinned_messages:
-        await pinned_messages[0].unpin()
-
-    await message.pin()
-    await ctx.send("Game link pinned! 📌")
 
 
 @bot.command()
