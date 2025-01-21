@@ -4,7 +4,7 @@ import datetime
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from db import Database
-from game import create_game, fetch_missing_games_scores
+from game import create_game, update_scores
 
 load_dotenv()
 
@@ -33,7 +33,7 @@ async def create_game_task():
 @tasks.loop(time=set_time(23, 45))
 async def fetch_scores_task():
     print("Fetching missing game scores...")
-    await fetch_missing_games_scores()
+    await update_scores()
 
 
 @tasks.loop(time=set_time(23, 59))
@@ -67,23 +67,28 @@ async def generate(ctx):
 
 
 @bot.command()
+@commands.cooldown(1, 120, commands.BucketType.user)
 async def today(ctx):
-    await fetch_missing_games_scores()
+    message = await ctx.send("Fetching today's scores, please wait... 🕐")
+    await update_scores()
     scores = db.get_todays_scores()
-    await ctx.send(scores)
+    await message.edit(content=scores)
 
 
 @bot.command()
 async def week(ctx):
-    await fetch_missing_games_scores()
+    message = await ctx.send("Fetching this week's scores, please wait... 🕐")
+    await update_scores()
     scores = db.get_week_scores()
-    await ctx.send(scores)
+    await message.edit(content=scores)
 
 
 @bot.command()
 async def leaderboard(ctx):
+    message = await ctx.send("Fetching leaderboard, please wait... 🕐")
+    await update_scores()
     scores = db.get_total_scores()
-    await ctx.send(scores)
+    await message.edit(content=scores)
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))

@@ -64,3 +64,14 @@ async def fetch_missing_games_scores():
         await fetch_game_scores(game_id)
         if len(game_ids) > 1:
             await asyncio.sleep(10)
+
+
+async def fetch_todays_scores():
+    db = Database()
+    game_id = db.get_latest_game()
+    await fetch_game_scores(game_id)
+
+
+async def update_scores():
+    await fetch_missing_games_scores()
+    await fetch_todays_scores()
