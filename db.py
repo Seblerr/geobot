@@ -21,8 +21,9 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 game_id TEXT,
                 player_name TEXT,
+                round_number INTEGER,
                 score INTEGER,
-                UNIQUE(game_id, player_name),
+                UNIQUE(game_id, player_name, round_number),
                 FOREIGN KEY (game_id) REFERENCES games(game_id)
             )
             """)
@@ -51,8 +52,11 @@ class Database:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.executemany(
-                "INSERT OR IGNORE INTO scores (game_id, player_name, score) VALUES (?, ?, ?)",
-                [(game_id, player, score) for player, score in scoresheet],
+                "INSERT OR IGNORE INTO scores (game_id, player_name, round_number, score) VALUES (?, ?, ?, ?)",
+                [
+                    (game_id, player, round_num, score)
+                    for player, round_num, score in scoresheet
+                ],
             )
             conn.commit()
             if cursor.rowcount > 0:
@@ -78,17 +82,27 @@ class Database:
             if game_id:
                 cursor.execute(
                     """
-                    SELECT player_name, score
+                    SELECT 
+                        player_name,
+                        SUM(score) as total_score,
+                        COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
+                        COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
                     FROM scores
                     WHERE game_id = ?
-                    ORDER BY score DESC
+                    GROUP BY player_name
+                    ORDER BY total_score DESC
                     """,
                     (game_id,),
                 )
             else:
                 cursor.execute(
                     """
-                    SELECT player_name, SUM(score) AS total_score, count (DISTINCT game_id) as games_played
+                    SELECT
+                        player_name,
+                        SUM(score) AS total_score,
+                        count (DISTINCT game_id) as games_played,
+                        count(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
+                        count(CASE WHEN score = 0 THEN 1 END) as missed_scores
                     FROM scores
                     GROUP BY player_name
                     ORDER BY total_score DESC
@@ -97,7 +111,7 @@ class Database:
             scores = cursor.fetchall()
 
             if not scores:
-                return "No scores available for today's game."
+                return "No scores available."
 
             table = self.format_table(scores, game_id=game_id)
             return table
@@ -112,7 +126,12 @@ class Database:
 
             cursor.execute(
                 """
-                SELECT player_name, SUM(score) AS total_score, COUNT(DISTINCT scores.game_id) AS games_played
+                SELECT
+                    player_name,
+                    SUM(score) AS total_score,
+                    COUNT(DISTINCT scores.game_id) AS games_played,
+                    COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
+                    COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
                 FROM scores
                 JOIN games ON scores.game_id = games.game_id
                 WHERE DATE(games.created_at) BETWEEN ? AND ?
@@ -138,25 +157,25 @@ class Database:
         return self.get_scores()
 
     def format_table(self, scores, game_id=None, weekly=None):
-        if not game_id:
-            title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}\n"
-            separator = "-" * 62 + "\n"
+        if game_id:
+            title = "Today's Leaderboard"
+            header = f"{'Player':<20}{'Score':>10}{'5000s':>10}{'0s':>10}\n"
+            separator = "-" * 50 + "\n"
 
             rows = "\n".join(
-                f"{player:<20}{score:>10,}{games:>15,}{score // games:>15,}".replace(
-                    ",", " "
-                )
-                for player, score, games in scores
+                f"{player:<20}{score:>10,}{perfect:>10,}{missed:>10}".replace(",", " ")
+                for player, score, perfect, missed in scores
             )
         else:
-            title = "Today's Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}\n"
-            separator = "-" * 32 + "\n"
+            title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
+            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}{'5000s':>10}{'0s':>10'}\n"
+            separator = "-" * 80 + "\n"
 
             rows = "\n".join(
-                f"{player:<20}{score:>10,}".replace(",", " ")
-                for player, score in scores
+                f"{player:<20}{score:>10,}{games:>15,}{score // games:>15,}{perfect:>10,}{missed:>10}".replace(
+                    ",", " "
+                )
+                for player, score, games, perfect, missed in scores
             )
 
         return f"**{title}**\n\n```\n{header}{separator}{rows}\n```"

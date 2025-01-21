@@ -49,10 +49,17 @@ async def fetch_game_scores(game_id):
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
         assert res.status_code == 200
-        items = res.json()["items"]
-        scores = [(item["playerName"], item["totalScore"]) for item in items]
+        for player in res.json()["items"]:
+            player_name = player["playerName"]
+            round_scores = [
+                round["roundScoreInPoints"]
+                for round in player["game"]["player"]["guesses"]
+            ]
+            scores = [
+                (player_name, i + 1, score) for i, score in enumerate(round_scores)
+            ]
 
-        db.add_scores(game_id, scores)
+            db.add_scores(game_id, scores)
     finally:
         session.close()
 
