@@ -168,7 +168,7 @@ class Database:
             )
         else:
             title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}{'5000s':>10}{'0s':>10'}\n"
+            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}{'5000s':>10}{'0s':>10}\n"
             separator = "-" * 80 + "\n"
 
             rows = "\n".join(
