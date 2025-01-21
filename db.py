@@ -99,7 +99,7 @@ class Database:
             if not scores:
                 return "No scores available for today's game."
 
-            table = self.format_table(scores, game_id)
+            table = self.format_table(scores, game_id=game_id)
             return table
 
     def get_week_scores(self):
@@ -127,7 +127,7 @@ class Database:
             if not scores:
                 return "No scores available for this week's games."
 
-            table = self.format_table(scores)
+            table = self.format_table(scores, weekly=True)
             return table
 
     def get_todays_scores(self):
@@ -137,9 +137,9 @@ class Database:
     def get_total_scores(self):
         return self.get_scores()
 
-    def format_table(self, scores, game_id=None):
+    def format_table(self, scores, game_id=None, weekly=None):
         if not game_id:
-            title = "Overall Leaderboard"
+            title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
             header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}\n"
             separator = "-" * 62 + "\n"
 
