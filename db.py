@@ -75,46 +75,51 @@ class Database:
             )
             return [row[0] for row in cursor.fetchall()]
 
-    def get_scores(self, game_id=None):
+    def get_scores(self, game_id=None, sorted_by_avg=None):
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
             if game_id:
-                cursor.execute(
-                    """
-                    SELECT 
-                        player_name,
-                        SUM(score) as total_score,
-                        COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
-                        COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
-                    FROM scores
-                    WHERE game_id = ?
-                    GROUP BY player_name
-                    ORDER BY total_score DESC
-                    """,
-                    (game_id,),
-                )
+                query = self._get_game_scores_query()
+                cursor.execute(query, (game_id,))
             else:
-                cursor.execute(
-                    """
-                    SELECT
-                        player_name,
-                        SUM(score) AS total_score,
-                        count (DISTINCT game_id) as games_played,
-                        count(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
-                        count(CASE WHEN score = 0 THEN 1 END) as missed_scores
-                    FROM scores
-                    GROUP BY player_name
-                    ORDER BY total_score DESC
-                    """
-                )
+                query = self._get_overall_scores_query(sorted_by_avg)
+                cursor.execute(query)
             scores = cursor.fetchall()
 
             if not scores:
                 return "No scores available."
 
-            table = self.format_table(scores, game_id=game_id)
+            table = self._format_table(scores, game_id=game_id)
             return table
+
+    def _get_game_scores_query(self):
+        return """
+            SELECT
+                player_name,
+                SUM(score) as total_score,
+                COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
+                COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
+            FROM scores
+            WHERE game_id = ?
+            GROUP BY player_name
+            ORDER BY total_score DESC
+        """
+
+    def _get_overall_scores_query(self, sorted_by_avg=False):
+        order_by = "average_score DESC" if sorted_by_avg else "total_score DESC"
+        return f"""
+            SELECT
+                player_name,
+                SUM(score) AS total_score,
+                COUNT(DISTINCT game_id) AS games_played,
+                SUM(score) / COUNT(DISTINCT game_id) AS average_score,
+                COUNT(CASE WHEN score = 5000 THEN 1 END) AS perfect_scores,
+                COUNT(CASE WHEN score = 0 THEN 1 END) AS missed_scores
+            FROM scores
+            GROUP BY player_name
+            ORDER BY {order_by}
+        """
 
     def get_week_scores(self):
         with self.db_connection() as conn:
@@ -146,17 +151,17 @@ class Database:
             if not scores:
                 return "No scores available for this week's games."
 
-            table = self.format_table(scores, weekly=True)
+            table = self._format_table(scores, weekly=True)
             return table
 
     def get_todays_scores(self):
         game_id = self.get_latest_game()
         return self.get_scores(game_id)
 
-    def get_total_scores(self):
-        return self.get_scores()
+    def get_total_scores(self, sorted_by_avg=None):
+        return self.get_scores(game_id=None, sorted_by_avg=sorted_by_avg)
 
-    def format_table(self, scores, game_id=None, weekly=None):
+    def _format_table(self, scores, game_id=None, weekly=None):
         if game_id:
             title = "Today's Leaderboard"
             header = f"{'Player':<20}{'Score':>10}{'5000s':>10}{'0s':>10}\n"
@@ -168,14 +173,14 @@ class Database:
             )
         else:
             title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}{'Games Played':>15}{'Average Score':>15}{'5000s':>10}{'0s':>10}\n"
-            separator = "-" * 80 + "\n"
+            header = f"{'Player':<20}{'Score':>10}{'# Games':>15}{'Avg Score':>10}{'5000s':>10}{'0s':>10}\n"
+            separator = "-" * 75 + "\n"
 
             rows = "\n".join(
-                f"{player:<20}{score:>10,}{games:>15,}{score // games:>15,}{perfect:>10,}{missed:>10}".replace(
+                f"{player:<20}{score:>10,}{games:>15,}{average:>10,}{perfect:>10,}{missed:>10}".replace(
                     ",", " "
                 )
-                for player, score, games, perfect, missed in scores
+                for player, score, games, average, perfect, missed in scores
             )
 
         return f"**{title}**\n\n```\n{header}{separator}{rows}\n```"

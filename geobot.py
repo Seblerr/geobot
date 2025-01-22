@@ -78,10 +78,15 @@ async def week(ctx):
 
 
 @bot.command()
-async def leaderboard(ctx):
+async def leaderboard(ctx, sort_by="total"):
     message = await ctx.send("Fetching leaderboard, please wait... 🕐")
     await update_scores()
-    scores = db.get_total_scores()
+
+    sort_by = sort_by.lower()
+    leaderboard_options = {"average": True, "avg": True, "total": False}
+    sort_by_avg = leaderboard_options[sort_by]
+
+    scores = db.get_total_scores(sorted_by_avg=sort_by_avg)
     await message.edit(content=scores)
 
 
