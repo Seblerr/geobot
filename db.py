@@ -135,7 +135,7 @@ class Database:
                     player_name,
                     SUM(score) AS total_score,
                     COUNT(DISTINCT scores.game_id) AS games_played,
-                    SUM(score) / COUNT(DISTINCT game_id) AS average_score,
+                    SUM(score) / COUNT(DISTINCT scores.game_id) AS average_score,
                     COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
                     COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
                 FROM scores
