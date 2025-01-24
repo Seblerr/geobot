@@ -27,14 +27,14 @@ async def create_game_task():
     link = create_game()
     channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
     channel = await bot.fetch_channel(channel_id)
-    await channel.send(link)
+    message = await channel.send(link)
 
     pinned_messages = await channel.pins()
     if pinned_messages:
         await pinned_messages[0].unpin()
-
-    message = await channel.send("Game link pinned! 📌")
     await message.pin()
+
+    await channel.send("Game link pinned! 📌")
 
 
 @tasks.loop(time=set_time(23, 45))
