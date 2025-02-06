@@ -49,17 +49,19 @@ async def fetch_game_scores(game_id):
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
         assert res.status_code == 200
-        for player in res.json()["items"]:
-            player_name = player["playerName"]
-            round_scores = [
-                round["roundScoreInPoints"]
-                for round in player["game"]["player"]["guesses"]
-            ]
-            scores = [
-                (player_name, i + 1, score) for i, score in enumerate(round_scores)
-            ]
+        for item in res.json().get("items", []):
+            try:
+                nick = item["game"]["player"]["nick"]
+                round_scores = [
+                    round["roundScoreInPoints"]
+                    for round in item["game"]["player"]["guesses"]
+                ]
 
-            db.add_scores(game_id, scores)
+                scores = [(nick, i + 1, score) for i, score in enumerate(round_scores)]
+
+                db.add_scores(game_id, scores)
+            except KeyError as e:
+                print(f"KeyError: Missing {e.args[0]} in JSON response")
     finally:
         session.close()
 
