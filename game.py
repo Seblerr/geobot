@@ -3,13 +3,14 @@ import requests
 import asyncio
 from db import Database
 from dotenv import load_dotenv
+from typing import Optional
 
 # Map IDs
 I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
 A_COMMUNITY_WORLD = "62a44b22040f04bd36e8a914"
 
 
-def create_game():
+def create_game() -> Optional[str]:
     load_dotenv()
 
     session = requests.Session()
@@ -17,7 +18,6 @@ def create_game():
     try:
         token = os.getenv("GEOGUESSR_NCFA")
         session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
-        print
 
         res = session.post(
             "https://www.geoguessr.com/api/v3/challenges",
@@ -30,7 +30,9 @@ def create_game():
                 "timeLimit": 60,
             },
         )
-        assert res.status_code == 200
+        if res.status_code != 200:
+            return None
+
         game_id = res.json()["token"]
         db = Database()
         db.add_game(game_id)
@@ -39,7 +41,7 @@ def create_game():
         session.close()
 
 
-async def fetch_game_scores(game_id):
+async def fetch_game_scores(game_id) -> None:
     load_dotenv()
     session = requests.Session()
 
@@ -69,7 +71,7 @@ async def fetch_game_scores(game_id):
         session.close()
 
 
-async def fetch_missing_games_scores():
+async def update_missing_games_scores() -> None:
     db = Database()
     game_ids = db.get_missing_game_ids()
     for game_id in game_ids:
@@ -78,12 +80,12 @@ async def fetch_missing_games_scores():
             await asyncio.sleep(10)
 
 
-async def fetch_todays_scores():
+async def update_todays_scores() -> None:
     db = Database()
-    game_id = db.get_latest_game()
+    game_id = db.get_latest_game_id()
     await fetch_game_scores(game_id)
 
 
-async def update_scores():
-    await fetch_missing_games_scores()
-    await fetch_todays_scores()
+async def update_scores() -> None:
+    await update_missing_games_scores()
+    await update_todays_scores()

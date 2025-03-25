@@ -1,6 +1,7 @@
 import sqlite3
 import datetime
 from contextlib import contextmanager
+from typing import Optional
 
 
 class Database:
@@ -28,7 +29,7 @@ class Database:
             )
             """)
 
-    def add_game(self, game_id):
+    def add_game(self, game_id: str) -> None:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -38,7 +39,7 @@ class Database:
             conn.commit()
             print(f"Game {game_id} added to the database.")
 
-    def get_latest_game(self):
+    def get_latest_game_id(self) -> Optional[str]:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT game_id FROM games ORDER BY id DESC LIMIT 1")
@@ -46,9 +47,9 @@ class Database:
             if result:
                 return result[0]
             else:
-                return "No games found"
+                return None
 
-    def add_scores(self, game_id, scoresheet):
+    def add_scores(self, game_id: str, scoresheet: list[tuple[str, int, int]]) -> None:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.executemany(
@@ -62,7 +63,7 @@ class Database:
             if cursor.rowcount > 0:
                 print("Scores added to the database.")
 
-    def get_missing_game_ids(self):
+    def get_missing_game_ids(self) -> list[str]:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -75,7 +76,9 @@ class Database:
             )
             return [row[0] for row in cursor.fetchall()]
 
-    def get_scores(self, game_id=None, sorted_by_avg=None):
+    def get_scores(
+        self, game_id: Optional[str] = None, sorted_by_avg: bool = False
+    ) -> Optional[str]:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -88,12 +91,11 @@ class Database:
             scores = cursor.fetchall()
 
             if not scores:
-                return "No scores available."
+                return None
 
-            table = self._format_table(scores, game_id=game_id)
-            return table
+            return self._format_table(scores, game_id=game_id)
 
-    def _get_game_scores_query(self):
+    def _get_game_scores_query(self) -> str:
         return """
             SELECT
                 player_name,
@@ -106,7 +108,7 @@ class Database:
             ORDER BY total_score DESC
         """
 
-    def _get_overall_scores_query(self, sorted_by_avg=False):
+    def _get_overall_scores_query(self, sorted_by_avg: bool = False) -> str:
         order_by = "average_score DESC" if sorted_by_avg else "total_score DESC"
         return f"""
             SELECT
@@ -121,7 +123,7 @@ class Database:
             ORDER BY {order_by}
         """
 
-    def get_week_scores(self):
+    def get_week_scores(self) -> Optional[str]:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -150,19 +152,21 @@ class Database:
             scores = cursor.fetchall()
 
             if not scores:
-                return "No scores available for this week's games."
+                return None
 
             table = self._format_table(scores, weekly=True)
             return table
 
-    def get_todays_scores(self):
-        game_id = self.get_latest_game()
+    def get_todays_scores(self) -> Optional[str]:
+        game_id = self.get_latest_game_id()
         return self.get_scores(game_id)
 
-    def get_total_scores(self, sorted_by_avg=None):
+    def get_total_scores(self, sorted_by_avg: bool = False) -> Optional[str]:
         return self.get_scores(game_id=None, sorted_by_avg=sorted_by_avg)
 
-    def _format_table(self, scores, game_id=None, weekly=None):
+    def _format_table(
+        self, scores: list[tuple], game_id: Optional[str] = None, weekly: bool = False
+    ) -> str:
         if game_id:
             title = "Today's Leaderboard"
             header = f"{'Player':<20}{'Score':>10}{'5000s':>10}{'0s':>10}\n"
@@ -186,7 +190,7 @@ class Database:
 
         return f"**{title}**\n\n```\n{header}{separator}{rows}\n```"
 
-    def print_table(self, table_name):
+    def print_table(self, table_name: str) -> None:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(f"SELECT * FROM {table_name}")
