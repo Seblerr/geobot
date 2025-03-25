@@ -89,11 +89,8 @@ async def leaderboard(ctx, sort_by="total"):
 
 @bot.command()
 async def add_game(ctx, game_id: str):
-    try:
-        await fetch_game_scores(game_id)
-    except Exception as e:
-        print(f"Failed to fetch scores for game {game_id}: {e}")
-
+    db.add_game(game_id)
+    await fetch_game_scores(game_id)
     await ctx.send("Game added to the database.")
 
 
