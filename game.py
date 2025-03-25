@@ -4,10 +4,13 @@ import asyncio
 from db import Database
 from dotenv import load_dotenv
 
+# Map IDs
+I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
+A_COMMUNITY_WORLD = "62a44b22040f04bd36e8a914"
+
 
 def create_game():
     load_dotenv()
-    MAP = "5cfda2c9bc79e16dd866104d"
 
     session = requests.Session()
 
@@ -19,11 +22,11 @@ def create_game():
         res = session.post(
             "https://www.geoguessr.com/api/v3/challenges",
             json={
+                "accessLevel": 1,
                 "forbidMoving": True,
                 "forbidRotating": False,
                 "forbidZooming": False,
-                "map": MAP,
-                "rounds": 5,
+                "map": A_COMMUNITY_WORLD,
                 "timeLimit": 60,
             },
         )
