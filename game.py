@@ -53,7 +53,9 @@ async def fetch_game_scores(game_id) -> None:
         res = session.get(
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
-        assert res.status_code == 200
+        if res.status_code != 200:
+            raise Exception(f"Failed to fetch scores: HTTP {res.status_code}")
+
         for item in res.json().get("items", []):
             try:
                 nick = item["game"]["player"]["nick"]
@@ -75,7 +77,11 @@ async def update_missing_games_scores() -> None:
     db = Database()
     game_ids = db.get_missing_game_ids()
     for game_id in game_ids:
-        await fetch_game_scores(game_id)
+        try:
+            await fetch_game_scores(game_id)
+        except Exception as e:
+            print(f"Failed to fetch scores for game {game_id}: {e}")
+
         if len(game_ids) > 1:
             await asyncio.sleep(10)
 
@@ -83,7 +89,10 @@ async def update_missing_games_scores() -> None:
 async def update_todays_scores() -> None:
     db = Database()
     game_id = db.get_latest_game_id()
-    await fetch_game_scores(game_id)
+    try:
+        await fetch_game_scores(game_id)
+    except Exception as e:
+        print(f"Failed to fetch scores for game {game_id}: {e}")
 
 
 async def update_scores() -> None:
