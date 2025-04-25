@@ -42,11 +42,14 @@ async def fetch_scores_task():
 
 @tasks.loop(time=set_time(23, 59))
 async def post_scores_task():
-    print("Posting scores...")
-    channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
-    channel = await bot.fetch_channel(channel_id)
-    scores = db.get_todays_scores()
-    await channel.send(scores)
+    try:
+        channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
+        channel = await bot.fetch_channel(channel_id)
+        scores = db.get_todays_scores()
+        await channel.send(scores)
+    except Exception as e:
+        print(f"Failed to post scores: {e}")
+        post_scores_task.cancel()
 
 
 @bot.event
