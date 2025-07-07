@@ -83,8 +83,7 @@ async def leaderboard(ctx, sort_by="total"):
     await update_scores()
 
     sort_by = sort_by.lower()
-    leaderboard_options = {"average": True, "avg": True, "total": False}
-    sort_by_avg = leaderboard_options[sort_by]
+    sort_by_avg = sort_by in {"average", "avg"}
 
     scores = db.get_total_scores(sorted_by_avg=sort_by_avg)
     await message.edit(content=scores)
