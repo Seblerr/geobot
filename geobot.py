@@ -55,9 +55,12 @@ async def post_scores_task():
 @bot.event
 async def on_ready():
     print(f"We have logged in as {bot.user}")
-    create_game_task.start()
-    fetch_scores_task.start()
-    post_scores_task.start()
+    if not create_game_task.is_running():
+        create_game_task.start()
+    if not fetch_scores_task.is_running():
+        fetch_scores_task.start()
+    if not post_scores_task.is_running():
+        post_scores_task.start()
 
 
 @bot.command()
