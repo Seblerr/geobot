@@ -169,26 +169,41 @@ class Database:
     ) -> str:
         if game_id:
             title = "Today's Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}{'5000s':>10}{'0s':>10}\n"
-            separator = "-" * 50 + "\n"
-
-            rows = "\n".join(
-                f"{player:<20}{score:>10,}{perfect:>10,}{missed:>10}".replace(",", " ")
-                for player, score, perfect, missed in scores
-            )
+            columns = ["Player", "Score", "5000s", "0s"]
         else:
             title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
-            header = f"{'Player':<20}{'Score':>10}{'# Games':>15}{'Avg Score':>10}{'5000s':>10}{'0s':>10}\n"
-            separator = "-" * 75 + "\n"
+            columns = ["Player", "Score", "# Games", "Avg Score", "5000s", "0s"]
 
-            rows = "\n".join(
-                f"{player:<20}{score:>10,}{games:>15,}{average:>10,}{perfect:>10,}{missed:>10}".replace(
-                    ",", " "
-                )
-                for player, score, games, average, perfect, missed in scores
-            )
+        str_rows = [[self._fmt_num(value) for value in row] for row in scores]
+        all_rows = [columns] + str_rows
 
-        return f"**{title}**\n\n```\n{header}{separator}{rows}\n```"
+        padding = 2
+        col_widths = [
+            max(len(str(cell)) for cell in col) + padding for col in zip(*all_rows)
+        ]
+
+        format_specs = (
+            [
+                f"{{:<{col_widths[0]}}}"  # Left-align player names
+            ]
+            + [
+                f"{{:>{width}}}"
+                for width in col_widths[1:]  # Right-align numbers
+            ]
+        )
+        fmt = "".join(format_specs)
+
+        header = fmt.format(*columns)
+        separator = "-" * len(header)
+        data_rows = [fmt.format(*row) for row in str_rows]
+
+        table_content = "\n".join([header, separator] + data_rows)
+        return f"**{title}**\n\n```\n{table_content}\n```"
+
+    def _fmt_num(self, value):
+        if isinstance(value, int):
+            return f"{value:,}".replace(",", " ")
+        return value
 
     def print_table(self, table_name: str) -> None:
         with self.db_connection() as conn:
