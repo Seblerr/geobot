@@ -5,7 +5,11 @@ from typing import Optional
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, conn: sqlite3.Connection | None = None):
+        # To re-use connection for in-memory database
+        if conn:
+            self.conn = conn
+
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -214,11 +218,13 @@ class Database:
             for row in rows:
                 print(row)
 
-    @staticmethod
     @contextmanager
-    def db_connection():
-        con = sqlite3.connect("database.db")
-        try:
-            yield con
-        finally:
-            con.close()
+    def db_connection(self):
+        if self.conn:
+            yield self.conn
+        else:
+            conn = sqlite3.connect("database.db")
+            try:
+                yield conn
+            finally:
+                conn.close()
