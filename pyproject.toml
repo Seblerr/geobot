@@ -10,6 +10,7 @@ dependencies = [
     "debugpy>=1.8.14",
     "discord-py>=2.5.2",
     "dotenv>=0.9.9",
+    "mypy>=1.17.1",
     "requests>=2.32.4",
     "ruff>=0.12.2",
     "types-requests>=2.32.4.20250611",
