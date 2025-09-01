@@ -10,14 +10,18 @@ I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
 A_COMMUNITY_WORLD = "62a44b22040f04bd36e8a914"
 
 
-def create_game() -> Optional[str]:
+def create_game(db: Database) -> Optional[str]:
     load_dotenv()
 
     session = requests.Session()
 
     try:
         token = os.getenv("GEOGUESSR_NCFA")
-        session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
+        if not token:
+            print("NCFA token missing")
+            return None
+
+        session.cookies.set("_ncfa", token or "", domain="www.geoguessr.com")
 
         res = session.post(
             "https://www.geoguessr.com/api/v3/challenges",
@@ -34,22 +38,24 @@ def create_game() -> Optional[str]:
             return None
 
         game_id = res.json()["token"]
-        db = Database()
         db.add_game(game_id)
         return f"https://www.geoguessr.com/challenge/{game_id}"
     finally:
         session.close()
 
 
-async def fetch_game_scores(game_id) -> None:
+async def fetch_game_scores(db: Database, game_id: str) -> None:
     load_dotenv()
     session = requests.Session()
 
     try:
         token = os.getenv("GEOGUESSR_NCFA")
+        if not token:
+            print("NCFA token missing")
+            return None
+
         session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
 
-        db = Database()
         res = session.get(
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
@@ -73,12 +79,11 @@ async def fetch_game_scores(game_id) -> None:
         session.close()
 
 
-async def update_missing_games_scores() -> None:
-    db = Database()
+async def update_missing_games_scores(db: Database) -> None:
     game_ids = db.get_missing_game_ids()
     for game_id in game_ids:
         try:
-            await fetch_game_scores(game_id)
+            await fetch_game_scores(db, game_id)
         except Exception as e:
             print(f"Failed to fetch scores for game {game_id}: {e}")
 
@@ -86,15 +91,15 @@ async def update_missing_games_scores() -> None:
             await asyncio.sleep(10)
 
 
-async def update_todays_scores() -> None:
-    db = Database()
+async def update_todays_scores(db: Database) -> None:
     game_id = db.get_latest_game_id()
-    try:
-        await fetch_game_scores(game_id)
-    except Exception as e:
-        print(f"Failed to fetch scores for game {game_id}: {e}")
+    if game_id is not None:
+        try:
+            await fetch_game_scores(db, game_id)
+        except Exception as e:
+            print(f"Failed to fetch scores for game {game_id}: {e}")
 
 
-async def update_scores() -> None:
-    await update_missing_games_scores()
-    await update_todays_scores()
+async def update_scores(db: Database) -> None:
+    await update_missing_games_scores(db)
+    await update_todays_scores(db)

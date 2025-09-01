@@ -13,8 +13,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-
-db = Database()
+db = Database("database.db")
 
 
 def set_time(hour, minute):
@@ -24,7 +23,7 @@ def set_time(hour, minute):
 
 @tasks.loop(time=set_time(7, 0))
 async def create_game_task():
-    link = create_game()
+    link = create_game(db)
     channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
     channel = await bot.fetch_channel(channel_id)
 
@@ -37,7 +36,7 @@ async def create_game_task():
 @tasks.loop(time=set_time(23, 45))
 async def fetch_scores_task():
     print("Fetching missing game scores...")
-    await update_scores()
+    await update_scores(db)
 
 
 @tasks.loop(time=set_time(23, 59))
@@ -83,7 +82,7 @@ async def week(ctx):
 @bot.command()
 async def leaderboard(ctx, sort_by="total"):
     message = await ctx.send("Fetching leaderboard, please wait... 🕐")
-    await update_scores()
+    await update_scores(db)
 
     sort_by = sort_by.lower()
     sort_by_avg = sort_by in {"average", "avg"}
@@ -95,8 +94,8 @@ async def leaderboard(ctx, sort_by="total"):
 @bot.command()
 async def add_game(ctx, game_id: str):
     db.add_game(game_id)
-    await fetch_game_scores(game_id)
+    await fetch_game_scores(db, game_id)
     await ctx.send("Game added to the database.")
 
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+bot.run(os.getenv("DISCORD_TOKEN", ""))
