@@ -13,7 +13,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-db = Database("database.db")
+db = Database()
 
 
 def set_time(hour, minute):
@@ -66,7 +66,7 @@ async def on_ready():
 @commands.cooldown(1, 120, commands.BucketType.user)
 async def today(ctx):
     message = await ctx.send("Fetching today's scores, please wait... 🕐")
-    await update_scores()
+    await update_scores(db)
     scores = db.get_todays_scores()
     await message.edit(content=scores)
 
@@ -74,7 +74,7 @@ async def today(ctx):
 @bot.command()
 async def week(ctx):
     message = await ctx.send("Fetching this week's scores, please wait... 🕐")
-    await update_scores()
+    await update_scores(db)
     scores = db.get_week_scores()
     await message.edit(content=scores)
 

@@ -7,8 +7,7 @@ from typing import Optional
 class Database:
     def __init__(self, conn: sqlite3.Connection | None = None):
         # To re-use connection for in-memory database
-        if conn:
-            self.conn = conn
+        self.conn = conn
 
         with self.db_connection() as conn:
             cursor = conn.cursor()
