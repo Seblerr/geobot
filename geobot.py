@@ -68,7 +68,8 @@ async def today(ctx):
     message = await ctx.send("Fetching today's scores, please wait... 🕐")
     await update_scores(db)
     scores = db.get_todays_scores()
-    await message.edit(content=scores)
+    if scores:
+        await message.edit(content=scores)
 
 
 @bot.command()
@@ -76,7 +77,8 @@ async def week(ctx):
     message = await ctx.send("Fetching this week's scores, please wait... 🕐")
     await update_scores(db)
     scores = db.get_week_scores()
-    await message.edit(content=scores)
+    if scores:
+        await message.edit(content=scores)
 
 
 @bot.command()
@@ -88,7 +90,8 @@ async def leaderboard(ctx, sort_by="total"):
     sort_by_avg = sort_by in {"average", "avg"}
 
     scores = db.get_total_scores(sorted_by_avg=sort_by_avg)
-    await message.edit(content=scores)
+    if scores:
+        await message.edit(content=scores)
 
 
 @bot.command()
