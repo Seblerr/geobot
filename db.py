@@ -1,7 +1,6 @@
 import sqlite3
 import datetime
 from contextlib import contextmanager
-from typing import Optional
 
 
 class Database:
@@ -42,7 +41,7 @@ class Database:
             conn.commit()
             print(f"Game {game_id} added to the database.")
 
-    def get_latest_game_id(self) -> Optional[str]:
+    def get_latest_game_id(self) -> str | None:
         with self.db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT game_id FROM games ORDER BY id DESC LIMIT 1")
@@ -81,10 +80,10 @@ class Database:
 
     def get_scores(
         self,
-        game_id: Optional[str],
-        period: Optional[str],
-        sort_by_avg: bool,
-    ) -> Optional[str]:
+        game_id: str | None = None,
+        period: str | None = None,
+        sort_by_avg: bool = False,
+    ) -> str | None:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -115,7 +114,7 @@ class Database:
         """
 
     def _get_scores_query(
-        self, period: Optional[str], sort_by_avg: bool
+        self, period: str | None, sort_by_avg: bool
     ) -> tuple[str, tuple]:
         query = """
             SELECT
@@ -146,7 +145,7 @@ class Database:
 
         return (query, date_range)
 
-    def get_week_scores(self) -> Optional[str]:
+    def get_week_scores(self) -> str | None:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -180,11 +179,11 @@ class Database:
             table = self._format_table(scores)
             return table
 
-    def get_todays_scores(self) -> Optional[str]:
+    def get_todays_scores(self) -> str | None:
         game_id = self.get_latest_game_id()
         return self.get_scores(game_id, None, False)
 
-    def _format_table(self, scores: list[tuple], game_id: Optional[str] = None) -> str:
+    def _format_table(self, scores: list[tuple], game_id: str | None = None) -> str:
         if game_id:
             title = "Today's Leaderboard"
             columns = ["Player", "Score", "5000s", "0s"]

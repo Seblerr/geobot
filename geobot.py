@@ -102,7 +102,7 @@ async def leaderboard(
     period = (period or "all").lower()
     sort_by_avg = (sort_by or "").lower() in {"average", "avg"}
 
-    scores = db.get_scores(None, period, sort_by_avg)
+    scores = db.get_scores(period=period, sort_by_avg=sort_by_avg)
 
     if scores:
         await message.edit(content=scores)

@@ -3,14 +3,13 @@ import requests
 import asyncio
 from db import Database
 from dotenv import load_dotenv
-from typing import Optional
 
 # Map IDs
 I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
 A_COMMUNITY_WORLD = "62a44b22040f04bd36e8a914"
 
 
-def create_game(db: Database) -> Optional[str]:
+def create_game(db: Database) -> str | None:
     load_dotenv()
 
     session = requests.Session()
