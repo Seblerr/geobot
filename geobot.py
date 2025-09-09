@@ -24,8 +24,7 @@ def set_time(hour: int, minute: int) -> time:
 @tasks.loop(time=set_time(6, 0))
 async def create_game_task():
     link = create_game(db)
-    channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
-    channel = await bot.fetch_channel(channel_id)
+    channel = getattr(bot, "channel", None)
 
     if link is None:
         await channel.send("Couldn't generate challenge game.")
@@ -42,8 +41,7 @@ async def fetch_scores_task():
 @tasks.loop(time=set_time(23, 59))
 async def post_scores_task():
     try:
-        channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
-        channel = await bot.fetch_channel(channel_id)
+        channel = getattr(bot, "channel", None)
         scores = db.get_todays_scores()
         await channel.send(scores)
     except Exception as e:
@@ -57,10 +55,8 @@ async def post_week_leaderboard():
     if now.weekday() != 4:
         return
 
+    channel = getattr(bot, "channel", None)
     try:
-        channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
-        channel = await bot.fetch_channel(channel_id)
-
         scores = db.get_scores(period="week", sort_by_avg=True)
         if scores:
             await channel.send(scores)
@@ -74,6 +70,10 @@ async def post_week_leaderboard():
 @bot.event
 async def on_ready():
     print(f"We have logged in as {bot.user}")
+
+    channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
+    bot.channel = await bot.fetch_channel(channel_id)
+
     if not create_game_task.is_running():
         create_game_task.start()
     if not fetch_scores_task.is_running():
