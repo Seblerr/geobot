@@ -73,29 +73,23 @@ async def today(ctx):
 
 
 @bot.command()
-async def week(ctx):
-    message = await ctx.send("Fetching this week's scores, please wait... 🕐")
-    await update_scores(db)
-    scores = db.get_week_scores()
-    if scores:
-        await message.edit(content=scores)
-
-
-@bot.command()
-async def leaderboard(ctx, sort_by="total"):
+async def leaderboard(
+    ctx: commands.Context, period: str | None = None, sort_by: str | None = None
+):
     message = await ctx.send("Fetching leaderboard, please wait... 🕐")
     await update_scores(db)
 
-    sort_by = sort_by.lower()
-    sort_by_avg = sort_by in {"average", "avg"}
+    period = (period or "all").lower()
+    sort_by_avg = (sort_by or "").lower() in {"average", "avg"}
 
-    scores = db.get_total_scores(sorted_by_avg=sort_by_avg)
+    scores = db.get_scores(None, period, sort_by_avg)
+
     if scores:
         await message.edit(content=scores)
 
 
 @bot.command()
-async def add_game(ctx, game_id: str):
+async def add_game(ctx: commands.Context, game_id: str):
     db.add_game(game_id)
     await fetch_game_scores(db, game_id)
     await ctx.send("Game added to the database.")

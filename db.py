@@ -80,7 +80,10 @@ class Database:
             return [row[0] for row in cursor.fetchall()]
 
     def get_scores(
-        self, game_id: Optional[str] = None, sorted_by_avg: bool = False
+        self,
+        game_id: Optional[str],
+        period: Optional[str],
+        sort_by_avg: bool,
     ) -> Optional[str]:
         with self.db_connection() as conn:
             cursor = conn.cursor()
@@ -89,8 +92,8 @@ class Database:
                 query = self._get_game_scores_query()
                 cursor.execute(query, (game_id,))
             else:
-                query = self._get_overall_scores_query(sorted_by_avg)
-                cursor.execute(query)
+                query, date = self._get_scores_query(period, sort_by_avg)
+                cursor.execute(query, date)
             scores = cursor.fetchall()
 
             if not scores:
@@ -111,20 +114,37 @@ class Database:
             ORDER BY total_score DESC
         """
 
-    def _get_overall_scores_query(self, sorted_by_avg: bool = False) -> str:
-        order_by = "average_score DESC" if sorted_by_avg else "total_score DESC"
-        return f"""
+    def _get_scores_query(
+        self, period: Optional[str], sort_by_avg: bool
+    ) -> tuple[str, tuple]:
+        query = """
             SELECT
                 player_name,
                 SUM(score) AS total_score,
-                COUNT(DISTINCT game_id) AS games_played,
-                SUM(score) / COUNT(DISTINCT game_id) AS average_score,
+                COUNT(DISTINCT scores.game_id) AS games_played,
+                SUM(score) / COUNT(DISTINCT scores.game_id) AS average_score,
                 COUNT(CASE WHEN score = 5000 THEN 1 END) AS perfect_scores,
                 COUNT(CASE WHEN score = 0 THEN 1 END) AS missed_scores
             FROM scores
+            JOIN games ON scores.game_id = games.game_id
+        """
+
+        date_range: tuple = ()
+        if period in {"week", "weekly"}:
+            today = datetime.date.today()
+            monday = today - datetime.timedelta(days=today.weekday())
+            friday = monday + datetime.timedelta(days=4)
+
+            query += "WHERE DATE(games.created_at) BETWEEN ? AND ?"
+            date_range = (monday.isoformat(), friday.isoformat())
+
+        order_by = "average_score DESC" if sort_by_avg else "total_score DESC"
+        query += f"""
             GROUP BY player_name
             ORDER BY {order_by}
         """
+
+        return (query, date_range)
 
     def get_week_scores(self) -> Optional[str]:
         with self.db_connection() as conn:
@@ -157,24 +177,19 @@ class Database:
             if not scores:
                 return None
 
-            table = self._format_table(scores, weekly=True)
+            table = self._format_table(scores)
             return table
 
     def get_todays_scores(self) -> Optional[str]:
         game_id = self.get_latest_game_id()
-        return self.get_scores(game_id)
+        return self.get_scores(game_id, None, False)
 
-    def get_total_scores(self, sorted_by_avg: bool = False) -> Optional[str]:
-        return self.get_scores(game_id=None, sorted_by_avg=sorted_by_avg)
-
-    def _format_table(
-        self, scores: list[tuple], game_id: Optional[str] = None, weekly: bool = False
-    ) -> str:
+    def _format_table(self, scores: list[tuple], game_id: Optional[str] = None) -> str:
         if game_id:
             title = "Today's Leaderboard"
             columns = ["Player", "Score", "5000s", "0s"]
         else:
-            title = "Work Week Leaderboard" if weekly else "Overall Leaderboard"
+            title = "Leaderboard"
             columns = ["Player", "Score", "# Games", "Avg Score", "5000s", "0s"]
 
         str_rows = [[self._fmt_num(value) for value in row] for row in scores]
