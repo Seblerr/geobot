@@ -1,6 +1,6 @@
 import os
 import discord
-from datetime import time
+from datetime import datetime, time
 from zoneinfo import ZoneInfo
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
@@ -49,6 +49,26 @@ async def post_scores_task():
     except Exception as e:
         print(f"Failed to post scores: {e}")
         post_scores_task.cancel()
+
+
+@tasks.loop(time=set_time(17, 0))
+async def post_week_leaderboard():
+    now = datetime.now(ZoneInfo("Europe/Stockholm"))
+    if now.weekday() != 4:
+        return
+
+    try:
+        channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
+        channel = await bot.fetch_channel(channel_id)
+
+        scores = db.get_scores(period="week", sort_by_avg=True)
+        if scores:
+            await channel.send(scores)
+        else:
+            await channel.send("No scores available for this week.")
+    except Exception as e:
+        print(f"Failed to post weekly leaderboard: {e}")
+        post_week_leaderboard.cancel()
 
 
 @bot.event
