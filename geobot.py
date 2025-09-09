@@ -1,6 +1,7 @@
 import os
 import discord
-import datetime
+from datetime import time
+from zoneinfo import ZoneInfo
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from db import Database
@@ -16,12 +17,11 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 db = Database()
 
 
-def set_time(hour, minute):
-    tz = datetime.datetime.now().astimezone().tzinfo
-    return datetime.time(hour=hour, minute=minute, tzinfo=tz)
+def set_time(hour: int, minute: int) -> time:
+    return time(hour=hour, minute=minute, tzinfo=ZoneInfo("Europe/Stockholm"))
 
 
-@tasks.loop(time=set_time(7, 0))
+@tasks.loop(time=set_time(6, 0))
 async def create_game_task():
     link = create_game(db)
     channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
@@ -95,4 +95,5 @@ async def add_game(ctx: commands.Context, game_id: str):
     await ctx.send("Game added to the database.")
 
 
-bot.run(os.getenv("DISCORD_TOKEN", ""))
+if __name__ == "__main__":
+    bot.run(os.getenv("DISCORD_TOKEN", ""))

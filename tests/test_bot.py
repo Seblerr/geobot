@@ -1,6 +1,9 @@
 import sqlite3
 import unittest
+from datetime import time
+from zoneinfo import ZoneInfo
 from db import Database
+from geobot import set_time
 
 
 class TestDatabase(unittest.TestCase):
@@ -65,6 +68,15 @@ class TestDatabase(unittest.TestCase):
     def _add_game_with_scores(self, game_id: str, scoresheet: list[tuple]):
         self.db.add_game(game_id)
         self.db.add_scores(game_id, scoresheet)
+
+    def test_set_time(self):
+        t = set_time(6, 0)
+        assert isinstance(t, time)
+        assert t.hour == 6
+        assert t.minute == 0
+        assert t.tzinfo is not None
+        assert isinstance(t.tzinfo, ZoneInfo)
+        assert t.tzinfo.key == "Europe/Stockholm"
 
     def test_add_and_get_game(self):
         """Test that a game can be added and retrieved."""
