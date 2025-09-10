@@ -11,17 +11,23 @@ A_COMMUNITY_WORLD = "62a44b22040f04bd36e8a914"
 load_dotenv()
 
 
-def create_game(db: Database) -> str | None:
+def _get_authenticated_session() -> requests.Session | None:
+    token = os.getenv("GEOGUESSR_NCFA")
+    if not token:
+        print("NCFA token missing")
+        return None
+
     session = requests.Session()
+    session.cookies.set("_ncfa", token or "", domain="www.geoguessr.com")
+    return session
+
+
+def create_game(db: Database) -> str | None:
+    session = _get_authenticated_session()
+    if not session:
+        return None
 
     try:
-        token = os.getenv("GEOGUESSR_NCFA")
-        if not token:
-            print("NCFA token missing")
-            return None
-
-        session.cookies.set("_ncfa", token or "", domain="www.geoguessr.com")
-
         res = session.post(
             "https://www.geoguessr.com/api/v3/challenges",
             json={
@@ -44,16 +50,11 @@ def create_game(db: Database) -> str | None:
 
 
 async def fetch_game_scores(db: Database, game_id: str) -> None:
-    session = requests.Session()
+    session = _get_authenticated_session()
+    if not session:
+        return None
 
     try:
-        token = os.getenv("GEOGUESSR_NCFA")
-        if not token:
-            print("NCFA token missing")
-            return None
-
-        session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
-
         res = session.get(
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
