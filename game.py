@@ -86,23 +86,17 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
 
 async def update_missing_games_scores(db: Database) -> None:
     game_ids = db.get_missing_game_ids()
-    for game_id in game_ids:
-        try:
-            await fetch_game_scores(db, game_id)
-        except Exception as e:
-            print(f"Failed to fetch scores for game {game_id}: {e}")
+    for i, game_id in enumerate(game_ids):
+        await fetch_game_scores(db, game_id)
 
-        if len(game_ids) > 1:
+        if i < len(game_ids) - 1:
             await asyncio.sleep(10)
 
 
 async def update_todays_scores(db: Database) -> None:
     game_id = db.get_latest_game_id()
     if game_id is not None:
-        try:
-            await fetch_game_scores(db, game_id)
-        except Exception as e:
-            print(f"Failed to fetch scores for game {game_id}: {e}")
+        await fetch_game_scores(db, game_id)
 
 
 async def update_scores(db: Database) -> None:
