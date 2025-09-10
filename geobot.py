@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 from db import Database
 from game import create_game, update_scores, fetch_game_scores
 
+PERIODS = ["week", "weekly", "all"]
+SORTS = ["avg", "average"]
+
 load_dotenv()
 
 intents = discord.Intents.default()
@@ -93,19 +96,36 @@ async def today(ctx):
 
 
 @bot.command()
-async def leaderboard(
-    ctx: commands.Context, period: str | None = None, sort_by: str | None = None
-):
+async def leaderboard(ctx: commands.Context, *args):
     message = await ctx.send("Fetching leaderboard, please wait... 🕐")
+
+    period = None
+    sort_by_avg = False
+    invalid_args = []
+
+    for arg in args:
+        lower = arg.lower()
+        if lower in PERIODS:
+            period = lower
+        elif lower in SORTS:
+            sort_by_avg = True
+        else:
+            invalid_args.append(lower)
+
+    if invalid_args:
+        valid_options = f"Valid options: {', '.join(PERIODS + SORTS)}"
+        await message.edit(
+            content=f"Invalid arguments: `{', '.join(invalid_args)}`\n{valid_options}"
+        )
+        return
+
     await update_scores(db)
-
-    period = (period or "all").lower()
-    sort_by_avg = (sort_by or "").lower() in {"average", "avg"}
-
     scores = db.get_scores(period=period, sort_by_avg=sort_by_avg)
 
     if scores:
         await message.edit(content=scores)
+    else:
+        await message.edit(content="No scores found.")
 
 
 @bot.command()

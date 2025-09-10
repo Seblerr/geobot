@@ -16,7 +16,7 @@ class TestDatabase(unittest.TestCase):
             [
                 ("player1", 1, 3000),
                 ("player1", 2, 2000),
-                ("player2", 1, 1000),
+                ("player2", 1, 3000),
                 ("player2", 2, 2000),
             ],
         )
@@ -36,6 +36,13 @@ class TestDatabase(unittest.TestCase):
                 ("player1", 2, 3000),
                 ("player2", 1, 5000),
                 ("player2", 2, 2000),
+            ],
+        )
+        self._add_game_with_scores(
+            "game_id4",
+            [
+                ("player1", 1, 2000),
+                ("player1", 2, 3000),
             ],
         )
 
@@ -91,7 +98,7 @@ class TestDatabase(unittest.TestCase):
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM scores")
             scores = cursor.fetchall()
-            self.assertEqual(len(scores), 12)
+            self.assertEqual(len(scores), 14)
             self.assertEqual(scores[0][2], "player1")
             self.assertEqual(scores[0][4], 3000)
 
@@ -117,8 +124,8 @@ class TestDatabase(unittest.TestCase):
         player2_position = scores.find("player2")
 
         self.assertTrue(
-            player2_position < player1_position,
-            "Player2 should be listed before Player1",
+            player1_position < player2_position,
+            "Player1 should be listed before Player2",
         )
 
     def test_get_scores_sort_by_avg(self):
