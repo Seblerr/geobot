@@ -39,12 +39,15 @@ def create_game(db: Database) -> str | None:
                 "timeLimit": 60,
             },
         )
-        if res.status_code != 200:
-            return None
+        res.raise_for_status()
 
         game_id = res.json()["token"]
         db.add_game(game_id)
         return f"https://www.geoguessr.com/challenge/{game_id}"
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+        return None
     finally:
         session.close()
 
@@ -58,8 +61,7 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
         res = session.get(
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
-        if res.status_code != 200:
-            raise Exception(f"Failed to fetch scores: HTTP {res.status_code}")
+        res.raise_for_status()
 
         for item in res.json().get("items", []):
             try:
@@ -74,6 +76,10 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
                 db.add_scores(game_id, scores)
             except KeyError as e:
                 print(f"KeyError: Missing {e.args[0]} in JSON response")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+
     finally:
         session.close()
 
