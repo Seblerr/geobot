@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
 A_COMMUNITY_WORLD = "62a44b22040f04bd36e8a914"
 
+load_dotenv()
+
 
 def create_game(db: Database) -> str | None:
-    load_dotenv()
-
     session = requests.Session()
 
     try:
@@ -44,7 +44,6 @@ def create_game(db: Database) -> str | None:
 
 
 async def fetch_game_scores(db: Database, game_id: str) -> None:
-    load_dotenv()
     session = requests.Session()
 
     try:
