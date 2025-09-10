@@ -11,3 +11,8 @@ repos:
         entry: uv run mypy
         language: system
         types: [python]
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        types: [python]
