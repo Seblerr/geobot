@@ -64,18 +64,18 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
         res.raise_for_status()
 
         for item in res.json().get("items", []):
-            try:
-                nick = item["game"]["player"]["nick"]
-                round_scores = [
-                    round["roundScoreInPoints"]
-                    for round in item["game"]["player"]["guesses"]
-                ]
+            player = item.get("game").get("player")
+            nick = player.get("nick")
+            guesses = player.get("guesses")
 
-                scores = [(nick, i + 1, score) for i, score in enumerate(round_scores)]
+            if not nick or not guesses:
+                print(f"Incomplete data for game {game_id}, skipping item.")
+                continue
 
-                db.add_scores(game_id, scores)
-            except KeyError as e:
-                print(f"KeyError: Missing {e.args[0]} in JSON response")
+            round_scores = [round.get("roundScoreInPoints") for round in guesses]
+            scores = [(nick, i + 1, score) for i, score in enumerate(round_scores)]
+
+            db.add_scores(game_id, scores)
 
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
