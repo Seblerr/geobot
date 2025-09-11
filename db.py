@@ -179,10 +179,6 @@ class Database:
             table = self._format_table(scores)
             return table
 
-    def get_todays_scores(self) -> str | None:
-        game_id = self.get_latest_game_id()
-        return self.get_scores(game_id, None, False)
-
     def _format_table(self, scores: list[tuple], game_id: str | None = None) -> str:
         if game_id:
             title = "Today's Leaderboard"

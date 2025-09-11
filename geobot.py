@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from db import Database
 from game import create_game, update_scores, fetch_game_scores
 
-PERIODS = ["week", "weekly", "all"]
+PERIODS = ["today", "week", "weekly", "all"]
 SORTS = ["avg", "average"]
 
 load_dotenv()
@@ -86,19 +86,7 @@ async def on_ready():
 
 
 @bot.command()
-@commands.cooldown(1, 120, commands.BucketType.user)
-async def today(ctx):
-    message = await ctx.send("Fetching today's scores, please wait... 🕐")
-    await update_scores(db)
-    scores = db.get_todays_scores()
-    if scores:
-        await message.edit(content=scores)
-
-
-@bot.command()
 async def leaderboard(ctx: commands.Context, *args):
-    message = await ctx.send("Fetching leaderboard, please wait... 🕐")
-
     period = None
     sort_by_avg = False
     invalid_args = []
@@ -114,13 +102,19 @@ async def leaderboard(ctx: commands.Context, *args):
 
     if invalid_args:
         valid_options = f"Valid options: {', '.join(PERIODS + SORTS)}"
-        await message.edit(
-            content=f"Invalid arguments: `{', '.join(invalid_args)}`\n{valid_options}"
+        await ctx.send(
+            f"Invalid arguments: `{', '.join(invalid_args)}`\n{valid_options}"
         )
         return
 
+    message = await ctx.send("Fetching leaderboard, please wait... 🕐")
+
+    game_id = None
+    if period == "today":
+        game_id = db.get_latest_game_id()
+
     await update_scores(db)
-    scores = db.get_scores(period=period, sort_by_avg=sort_by_avg)
+    scores = db.get_scores(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
 
     if scores:
         await message.edit(content=scores)
