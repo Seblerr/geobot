@@ -25,24 +25,24 @@ def set_time(hour: int, minute: int) -> time:
 
 
 @tasks.loop(time=set_time(6, 0))
-async def create_game_task():
+async def create_game_task() -> None:
     link = create_game(db)
     channel = getattr(bot, "channel", None)
 
-    if link is None:
-        await channel.send("Couldn't generate challenge game.")
-    else:
-        await channel.send(link)
+    if not channel:
+        return
+
+    await channel.send(link or "Couldn't generate challenge game.")
 
 
 @tasks.loop(time=set_time(23, 45))
-async def fetch_scores_task():
+async def fetch_scores_task() -> None:
     print("Fetching missing game scores...")
     await update_scores(db)
 
 
 @tasks.loop(time=set_time(23, 59))
-async def post_scores_task():
+async def post_scores_task() -> None:
     try:
         channel = getattr(bot, "channel", None)
         if channel is None:
@@ -56,12 +56,15 @@ async def post_scores_task():
 
 
 @tasks.loop(time=set_time(17, 0))
-async def post_week_leaderboard():
+async def post_week_leaderboard() -> None:
     now = datetime.now(ZoneInfo("Europe/Stockholm"))
     if now.weekday() != 4:
         return
 
     channel = getattr(bot, "channel", None)
+    if channel is None:
+        return
+
     try:
         scores = db.get_scores(period="week", sort_by_avg=True)
         if scores:
@@ -74,18 +77,15 @@ async def post_week_leaderboard():
 
 
 @bot.event
-async def on_ready():
+async def on_ready() -> None:
     print(f"We have logged in as {bot.user}")
 
-    channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
-    bot.channel = await bot.fetch_channel(channel_id)
+    if channel_id_str := os.getenv("DISCORD_CHANNEL_ID"):
+        setattr(bot, "channel", await bot.fetch_channel(int(channel_id_str)))
 
-    if not create_game_task.is_running():
-        create_game_task.start()
-    if not fetch_scores_task.is_running():
-        fetch_scores_task.start()
-    if not post_scores_task.is_running():
-        post_scores_task.start()
+        for task in [create_game_task, fetch_scores_task, post_scores_task]:
+            if not task.is_running():
+                task.start()
 
 
 @bot.command()

@@ -13,7 +13,7 @@ load_dotenv()
 
 def _get_authenticated_session() -> requests.Session | None:
     token = os.getenv("GEOGUESSR_NCFA")
-    if not token:
+    if token is None:
         print("NCFA token missing")
         return None
 
@@ -24,7 +24,7 @@ def _get_authenticated_session() -> requests.Session | None:
 
 def create_game(db: Database) -> str | None:
     session = _get_authenticated_session()
-    if not session:
+    if session is None:
         return None
 
     try:
