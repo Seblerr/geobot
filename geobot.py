@@ -45,7 +45,10 @@ async def fetch_scores_task():
 async def post_scores_task():
     try:
         channel = getattr(bot, "channel", None)
-        scores = db.get_todays_scores()
+        if channel is None:
+            return
+        game_id = db.get_latest_game_id()
+        scores = db.get_scores(game_id=game_id)
         await channel.send(scores)
     except Exception as e:
         print(f"Failed to post scores: {e}")
