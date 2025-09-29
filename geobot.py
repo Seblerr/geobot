@@ -43,16 +43,15 @@ async def fetch_scores_task() -> None:
 
 @tasks.loop(time=set_time(23, 59))
 async def post_scores_task() -> None:
+    channel = getattr(bot, "channel", None)
+    if channel is None:
+        return
     try:
-        channel = getattr(bot, "channel", None)
-        if channel is None:
-            return
         game_id = db.get_latest_game_id()
         scores = db.get_scores(game_id=game_id)
         await channel.send(scores)
     except Exception as e:
         print(f"Failed to post scores: {e}")
-        post_scores_task.cancel()
 
 
 @tasks.loop(time=set_time(17, 0))
@@ -73,7 +72,6 @@ async def post_week_leaderboard() -> None:
             await channel.send("No scores available for this week.")
     except Exception as e:
         print(f"Failed to post weekly leaderboard: {e}")
-        post_week_leaderboard.cancel()
 
 
 @bot.event
@@ -83,7 +81,12 @@ async def on_ready() -> None:
     if channel_id_str := os.getenv("DISCORD_CHANNEL_ID"):
         setattr(bot, "channel", await bot.fetch_channel(int(channel_id_str)))
 
-        for task in [create_game_task, fetch_scores_task, post_scores_task]:
+        for task in [
+            create_game_task,
+            fetch_scores_task,
+            post_scores_task,
+            post_week_leaderboard,
+        ]:
             if not task.is_running():
                 task.start()
 
