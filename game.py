@@ -66,14 +66,17 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
         for item in res.json().get("items", []):
             player = item.get("game").get("player")
             nick = player.get("nick")
+            account_id = player.get("id")
             guesses = player.get("guesses")
 
-            if not nick or not guesses:
+            if not nick or not guesses or not account_id:
                 print(f"Incomplete data for game {game_id}, skipping item.")
                 continue
 
             round_scores = [round.get("roundScoreInPoints") for round in guesses]
-            scores = [(nick, i + 1, score) for i, score in enumerate(round_scores)]
+            scores = [
+                (account_id, nick, i + 1, score) for i, score in enumerate(round_scores)
+            ]
 
             db.add_scores(game_id, scores)
 

@@ -14,35 +14,35 @@ class TestDatabase(unittest.TestCase):
         self._add_game_with_scores(
             "game_id",
             [
-                ("player1", 1, 3000),
-                ("player1", 2, 2000),
-                ("player2", 1, 3000),
-                ("player2", 2, 2000),
+                ("p1_id", "player1", 1, 3000),
+                ("p1_id", "player1", 2, 2001),
+                ("p2_id", "player2", 1, 3000),
+                ("p2_id", "player2", 2, 2000),
             ],
         )
         self._add_game_with_scores(
             "game_id2",
             [
-                ("player1", 1, 2000),
-                ("player1", 2, 3000),
-                ("player2", 1, 2000),
-                ("player2", 2, 4000),
+                ("p1_id", "player1", 1, 2000),
+                ("p1_id", "player1", 2, 3000),
+                ("p2_id", "player2", 1, 2000),
+                ("p2_id", "player2", 2, 4000),
             ],
         )
         self._add_game_with_scores(
             "game_id3",
             [
-                ("player1", 1, 2000),
-                ("player1", 2, 3000),
-                ("player2", 1, 5000),
-                ("player2", 2, 2000),
+                ("p1_id", "player1", 1, 2000),
+                ("p1_id", "player1", 2, 3000),
+                ("p2_id", "player2", 1, 5000),
+                ("p2_id", "player2", 2, 2000),
             ],
         )
         self._add_game_with_scores(
             "game_id4",
             [
-                ("player1", 1, 2000),
-                ("player1", 2, 3000),
+                ("p1_id", "player1", 1, 2000),
+                ("p1_id", "player1", 2, 3000),
             ],
         )
 
@@ -52,6 +52,13 @@ class TestDatabase(unittest.TestCase):
     def _create_tables(self):
         with self.db.db_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL
+            )
+            """)
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS games (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,16 +70,19 @@ class TestDatabase(unittest.TestCase):
             CREATE TABLE IF NOT EXISTS scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 game_id TEXT,
-                player_name TEXT,
+                player_id INTEGER,
                 round_number INTEGER,
                 score INTEGER,
-                UNIQUE(game_id, player_name, round_number),
-                FOREIGN KEY (game_id) REFERENCES games(game_id)
+                UNIQUE(game_id, player_id, round_number),
+                FOREIGN KEY (game_id) REFERENCES games(game_id),
+                FOREIGN KEY (player_id) REFERENCES players(id)
             )
             """)
             conn.commit()
 
-    def _add_game_with_scores(self, game_id: str, scoresheet: list[tuple]):
+    def _add_game_with_scores(
+        self, game_id: str, scoresheet: list[tuple[str, str, int, int]]
+    ):
         self.db.add_game(game_id)
         self.db.add_scores(game_id, scoresheet)
 
@@ -99,7 +109,7 @@ class TestDatabase(unittest.TestCase):
             cursor.execute("SELECT * FROM scores")
             scores = cursor.fetchall()
             self.assertEqual(len(scores), 14)
-            self.assertEqual(scores[0][2], "player1")
+            self.assertEqual(scores[0][2], 1)
             self.assertEqual(scores[0][4], 3000)
 
     def test_get_scores_from_game(self):

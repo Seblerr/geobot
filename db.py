@@ -12,6 +12,14 @@ class Database:
             cursor = conn.cursor()
 
             cursor.execute("""
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL
+            )
+            """)
+
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS games (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 game_id TEXT UNIQUE,
@@ -23,13 +31,30 @@ class Database:
             CREATE TABLE IF NOT EXISTS scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 game_id TEXT,
-                player_name TEXT,
+                player_id INTEGER,
                 round_number INTEGER,
                 score INTEGER,
-                UNIQUE(game_id, player_name, round_number),
-                FOREIGN KEY (game_id) REFERENCES games(game_id)
+                UNIQUE(game_id, player_id, round_number),
+                FOREIGN KEY (game_id) REFERENCES games(game_id),
+                FOREIGN KEY (player_id) REFERENCES players(id)
             )
             """)
+
+    def upsert_player(self, account_id: str, name: str) -> int:
+        with self.db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO players (account_id, name)
+                VALUES (?, ?)
+                ON CONFLICT(account_id) DO UPDATE SET name = excluded.name
+                """,
+                (account_id, name),
+            )
+            cursor.execute("SELECT id FROM players WHERE account_id = ?", (account_id,))
+            player_id = cursor.fetchone()[0]
+            conn.commit()
+            return player_id
 
     def add_game(self, game_id: str) -> None:
         with self.db_connection() as conn:
@@ -51,14 +76,21 @@ class Database:
             else:
                 return None
 
-    def add_scores(self, game_id: str, scoresheet: list[tuple[str, int, int]]) -> None:
+    def add_scores(
+        self, game_id: str, scoresheet: list[tuple[str, str, int, int]]
+    ) -> None:
         with self.db_connection() as conn:
+            player_ids = {
+                account_id: self.upsert_player(account_id, name)
+                for account_id, name, _, _ in scoresheet
+            }
+
             cursor = conn.cursor()
             cursor.executemany(
-                "INSERT OR IGNORE INTO scores (game_id, player_name, round_number, score) VALUES (?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO scores (game_id, player_id, round_number, score) VALUES (?, ?, ?, ?)",
                 [
-                    (game_id, player, round_num, score)
-                    for player, round_num, score in scoresheet
+                    (game_id, player_ids[account_id], round_num, score)
+                    for account_id, _, round_num, score in scoresheet
                 ],
             )
             conn.commit()
@@ -103,13 +135,14 @@ class Database:
     def _get_game_scores_query(self) -> str:
         return """
             SELECT
-                player_name,
-                SUM(score) as total_score,
-                COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
-                COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
-            FROM scores
-            WHERE game_id = ?
-            GROUP BY player_name
+                p.name,
+                SUM(s.score) as total_score,
+                COUNT(CASE WHEN s.score = 5000 THEN 1 END) as perfect_scores,
+                COUNT(CASE WHEN s.score = 0 THEN 1 END) as missed_scores
+            FROM scores s
+            JOIN players p ON s.player_id = p.id
+            WHERE s.game_id = ?
+            GROUP BY p.name
             ORDER BY total_score DESC
         """
 
@@ -118,14 +151,15 @@ class Database:
     ) -> tuple[str, tuple]:
         query = """
             SELECT
-                player_name,
-                SUM(score) AS total_score,
-                COUNT(DISTINCT scores.game_id) AS games_played,
-                SUM(score) / COUNT(DISTINCT scores.game_id) AS average_score,
-                COUNT(CASE WHEN score = 5000 THEN 1 END) AS perfect_scores,
-                COUNT(CASE WHEN score = 0 THEN 1 END) AS missed_scores
-            FROM scores
-            JOIN games ON scores.game_id = games.game_id
+                p.name,
+                SUM(s.score) AS total_score,
+                COUNT(DISTINCT s.game_id) AS games_played,
+                SUM(s.score) / COUNT(DISTINCT s.game_id) AS average_score,
+                COUNT(CASE WHEN s.score = 5000 THEN 1 END) AS perfect_scores,
+                COUNT(CASE WHEN s.score = 0 THEN 1 END) AS missed_scores
+            FROM scores s
+            JOIN games g ON s.game_id = g.game_id
+            JOIN players p ON s.player_id = p.id
         """
 
         date_range: tuple = ()
@@ -134,12 +168,12 @@ class Database:
             monday = today - datetime.timedelta(days=today.weekday())
             friday = monday + datetime.timedelta(days=4)
 
-            query += "WHERE DATE(games.created_at) BETWEEN ? AND ?"
+            query += "WHERE DATE(g.created_at) BETWEEN ? AND ?"
             date_range = (monday.isoformat(), friday.isoformat())
 
         order_by = "average_score DESC" if sort_by_avg else "total_score DESC"
         query += f"""
-            GROUP BY player_name
+            GROUP BY p.name
             ORDER BY {order_by}
         """
 
