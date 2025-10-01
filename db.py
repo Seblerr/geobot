@@ -145,40 +145,6 @@ class Database:
 
         return (query, date_range)
 
-    def get_week_scores(self) -> str | None:
-        with self.db_connection() as conn:
-            cursor = conn.cursor()
-
-            today = datetime.date.today()
-            monday = today - datetime.timedelta(days=today.weekday())
-            friday = monday + datetime.timedelta(days=4)
-
-            cursor.execute(
-                """
-                SELECT
-                    player_name,
-                    SUM(score) AS total_score,
-                    COUNT(DISTINCT scores.game_id) AS games_played,
-                    SUM(score) / COUNT(DISTINCT scores.game_id) AS average_score,
-                    COUNT(CASE WHEN score = 5000 THEN 1 END) as perfect_scores,
-                    COUNT(CASE WHEN score = 0 THEN 1 END) as missed_scores
-                FROM scores
-                JOIN games ON scores.game_id = games.game_id
-                WHERE DATE(games.created_at) BETWEEN ? AND ?
-                GROUP BY player_name
-                ORDER BY total_score DESC
-                """,
-                (monday, friday),
-            )
-
-            scores = cursor.fetchall()
-
-            if not scores:
-                return None
-
-            table = self._format_table(scores)
-            return table
-
     def _format_table(self, scores: list[tuple], game_id: str | None = None) -> str:
         if game_id:
             title = "Today's Leaderboard"
