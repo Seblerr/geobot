@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "asyncio>=3.4.3",
-    "basedpyright>=1.29.5",
     "debugpy>=1.8.14",
     "discord-py>=2.5.2",
     "dotenv>=0.9.9",
@@ -15,9 +14,7 @@ dependencies = [
     "pytest>=8.4.1",
     "requests>=2.32.4",
     "ruff>=0.12.2",
+    "ty>=0.0.18",
     "types-requests>=2.32.4.20250611",
     "typing>=3.10.0.0",
 ]
-
-[tool.mypy]
-enable_error_code = ["attr-defined"]
