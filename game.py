@@ -1,6 +1,7 @@
 import os
 import requests
 import asyncio
+import datetime
 from db import Database
 from dotenv import load_dotenv
 
@@ -114,6 +115,29 @@ async def update_todays_scores(db: Database) -> None:
         await fetch_game_scores(db, game_id)
 
 
+async def update_work_week_scores(db: Database) -> None:
+    """Fetch scores for all games created during the current work week (Monday-Friday)."""
+    today = datetime.date.today()
+    monday = today - datetime.timedelta(days=today.weekday())
+    friday = monday + datetime.timedelta(days=4)
+
+    # Get games created during the work week
+    with db.db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT game_id FROM games WHERE DATE(created_at) BETWEEN ? AND ?",
+            (monday.isoformat(), friday.isoformat()),
+        )
+        game_ids = [row[0] for row in cursor.fetchall()]
+
+    # Fetch scores for each game
+    for i, game_id in enumerate(game_ids):
+        await fetch_game_scores(db, game_id)
+
+        if i < len(game_ids) - 1:
+            await asyncio.sleep(10)
+
+
 async def update_scores(db: Database) -> None:
     await update_missing_games_scores(db)
-    await update_todays_scores(db)
+    await update_work_week_scores(db)
