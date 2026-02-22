@@ -28,11 +28,14 @@ def set_time(hour: int, minute: int) -> time:
 async def create_game_task() -> None:
     link = create_game(db)
     channel = getattr(bot, "channel", None)
+    if channel is not None and hasattr(channel, "send"):
+        await channel.send(link or "Couldn't generate challenge game.")
 
-    if not channel:
-        return
 
-    await channel.send(link or "Couldn't generate challenge game.")
+def set_swedish_time(hour: int, minute: int) -> time:
+    # Set time in Swedish timezone (CET/CEST)
+    swedish_tz = ZoneInfo("Europe/Stockholm")
+    return time(hour=hour, minute=minute, tzinfo=swedish_tz)
 
 
 @tasks.loop(time=set_time(23, 45))
@@ -43,13 +46,20 @@ async def fetch_scores_task() -> None:
 
 @tasks.loop(time=set_time(23, 59))
 async def post_scores_task() -> None:
-    channel = getattr(bot, "channel", None)
-    if channel is None:
-        return
     try:
         game_id = db.get_latest_game_id()
         scores = db.get_scores(game_id=game_id)
-        await channel.send(scores)
+
+        channel_id_str = os.getenv("DISCORD_CHANNEL_ID")
+        if channel_id_str is None:
+            print("DISCORD_CHANNEL_ID environment variable not set")
+            return
+        channel_id = int(channel_id_str)
+        channel = await bot.fetch_channel(channel_id)
+
+        # Only send to text channels
+        if hasattr(channel, "send"):
+            await channel.send(scores)
     except Exception as e:
         print(f"Failed to post scores: {e}")
 
@@ -61,7 +71,7 @@ async def post_week_leaderboard() -> None:
         return
 
     channel = getattr(bot, "channel", None)
-    if channel is None:
+    if channel is None or not hasattr(channel, "send"):
         return
 
     try:
@@ -136,4 +146,8 @@ async def add_game(ctx: commands.Context, game_id: str):
 
 
 if __name__ == "__main__":
-    bot.run(os.getenv("DISCORD_TOKEN", ""))
+    token = os.getenv("DISCORD_TOKEN")
+    if token is None:
+        print("DISCORD_TOKEN environment variable not set")
+    else:
+        bot.run(token)

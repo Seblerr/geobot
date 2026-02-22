@@ -28,6 +28,12 @@ def create_game(db: Database) -> str | None:
         return None
 
     try:
+        token = os.getenv("GEOGUESSR_NCFA")
+        if token is None:
+            print("GEOGUESSR_NCFA environment variable not set")
+            return None
+        session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
+
         res = session.post(
             "https://www.geoguessr.com/api/v3/challenges",
             json={
@@ -58,6 +64,12 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
         return None
 
     try:
+        token = os.getenv("GEOGUESSR_NCFA")
+        if token is None:
+            print("GEOGUESSR_NCFA environment variable not set")
+            return
+        session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
+
         res = session.get(
             f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
