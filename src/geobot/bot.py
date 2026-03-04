@@ -150,7 +150,7 @@ async def post_week_leaderboard() -> None:
 
         # Update scores before posting leaderboard
         await update_work_week_scores(db)
-        scores = db.get_scores_rows(period="week", sort_by_avg=True)
+        scores = db.get_scores_rows(period="week", sort_by_avg=False)
         if scores:
             await channel.send(embed=build_leaderboard_embed(scores))
         else:

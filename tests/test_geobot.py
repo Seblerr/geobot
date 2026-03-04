@@ -90,7 +90,9 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
             await geobot_bot.post_week_leaderboard.coro()
 
         mock_update_work_week_scores.assert_awaited_once_with(fake_db)
-        fake_db.get_scores_rows.assert_called_once_with(period="week", sort_by_avg=True)
+        fake_db.get_scores_rows.assert_called_once_with(
+            period="week", sort_by_avg=False
+        )
         channel.send.assert_awaited_once()
         self.assertEqual(events, ["refresh", "scores", "send"])
 
