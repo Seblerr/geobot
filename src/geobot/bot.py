@@ -35,32 +35,63 @@ def _sanitize_cell(value: str) -> str:
     return value.replace("|", "\\|")
 
 
+def _truncate(value: str, max_len: int) -> str:
+    if len(value) <= max_len:
+        return value
+    return value[: max_len - 1] + "…"
+
+
 def _build_table_lines(scores: list[tuple], is_daily: bool) -> list[str]:
     if is_daily:
-        lines = ["# | Player | Score | 5k | 0s", "- | - | - | - | -"]
+        rows = []
         for index, row in enumerate(scores, start=1):
-            name = _sanitize_cell(str(row[0]))
-            total_score = _fmt_int(int(row[1]))
-            perfect_scores = row[2]
-            missed_scores = row[3]
-            lines.append(
-                f"{index} | {name} | {total_score} | {perfect_scores} | {missed_scores}"
+            rows.append(
+                [
+                    str(index),
+                    _truncate(_sanitize_cell(str(row[0])), 16),
+                    _fmt_int(int(row[1])),
+                    str(row[2]),
+                    str(row[3]),
+                ]
             )
-        return lines
+        headers = ["#", "Player", "Score", "5k", "0s"]
+    else:
+        rows = []
+        for index, row in enumerate(scores, start=1):
+            rows.append(
+                [
+                    str(index),
+                    _truncate(_sanitize_cell(str(row[0])), 16),
+                    _fmt_int(int(row[1])),
+                    str(row[2]),
+                    _fmt_int(int(row[3])),
+                    str(row[4]),
+                    str(row[5]),
+                ]
+            )
+        headers = ["#", "Player", "Score", "G", "Avg", "5k", "0s"]
 
-    lines = ["# | Player | Score | G | Avg | 5k | 0s", "- | - | - | - | - | - | -"]
-    for index, row in enumerate(scores, start=1):
-        name = _sanitize_cell(str(row[0]))
-        total_score = _fmt_int(int(row[1]))
-        games_played = row[2]
-        average_score = _fmt_int(int(row[3]))
-        perfect_scores = row[4]
-        missed_scores = row[5]
-        lines.append(
-            f"{index} | {name} | {total_score} | {games_played} | "
-            f"{average_score} | {perfect_scores} | {missed_scores}"
+    all_rows = [headers] + rows
+    col_widths = [
+        max(len(str(cell)) for cell in col) for col in zip(*all_rows, strict=False)
+    ]
+
+    def _fmt_row(row: list[str]) -> str:
+        return "  ".join(
+            [
+                f"{row[0]:>{col_widths[0]}}",
+                f"{row[1]:<{col_widths[1]}}",
+            ]
+            + [
+                f"{cell:>{col_widths[idx]}}"
+                for idx, cell in enumerate(row[2:], start=2)
+            ]
         )
-    return lines
+
+    header = _fmt_row(headers)
+    separator = "-" * len(header)
+    body = [_fmt_row(row) for row in rows]
+    return [header, separator] + body
 
 
 def build_leaderboard_embed(
@@ -73,7 +104,7 @@ def build_leaderboard_embed(
     max_rows = 25
     shown_scores = scores[:max_rows]
     table_lines = _build_table_lines(shown_scores, is_daily=is_daily)
-    embed.description = "\n".join(table_lines)
+    embed.description = "```\n" + "\n".join(table_lines) + "\n```"
     if len(scores) > max_rows:
         hidden_count = len(scores) - max_rows
         embed.set_footer(text=f"Showing top {max_rows}. {hidden_count} more players.")
