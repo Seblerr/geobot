@@ -68,16 +68,16 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
 
         def get_scores_side_effect(*_args, **_kwargs):
             events.append("scores")
-            return "weekly leaderboard"
+            return [("player", 12345, 3, 4115, 2, 0)]
 
-        async def send_side_effect(_message):
+        async def send_side_effect(*_args, **_kwargs):
             events.append("send")
 
         mock_update_work_week_scores.side_effect = refresh_side_effect
         channel.send.side_effect = send_side_effect
 
         fake_db = MagicMock()
-        fake_db.get_scores.side_effect = get_scores_side_effect
+        fake_db.get_scores_rows.side_effect = get_scores_side_effect
 
         with (
             patch.object(geobot_bot, "db", fake_db),
@@ -90,8 +90,8 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
             await geobot_bot.post_week_leaderboard.coro()
 
         mock_update_work_week_scores.assert_awaited_once_with(fake_db)
-        fake_db.get_scores.assert_called_once_with(period="week", sort_by_avg=True)
-        channel.send.assert_awaited_once_with("weekly leaderboard")
+        fake_db.get_scores_rows.assert_called_once_with(period="week", sort_by_avg=True)
+        channel.send.assert_awaited_once()
         self.assertEqual(events, ["refresh", "scores", "send"])
 
     @patch("geobot.bot.update_todays_scores", new_callable=AsyncMock)

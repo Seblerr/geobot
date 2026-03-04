@@ -117,6 +117,22 @@ class Database:
         period: str | None = None,
         sort_by_avg: bool = False,
     ) -> str:
+        scores = self.get_scores_rows(
+            game_id=game_id,
+            period=period,
+            sort_by_avg=sort_by_avg,
+        )
+
+        if not scores:
+            return ""
+        return self._format_table(scores, game_id=game_id)
+
+    def get_scores_rows(
+        self,
+        game_id: str | None = None,
+        period: str | None = None,
+        sort_by_avg: bool = False,
+    ) -> list[tuple]:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -127,10 +143,7 @@ class Database:
                 query, date = self._get_scores_query(period, sort_by_avg)
                 cursor.execute(query, date)
             scores = cursor.fetchall()
-
-        if not scores:
-            return ""
-        return self._format_table(scores, game_id=game_id)
+        return scores
 
     def _get_game_scores_query(self) -> str:
         return """

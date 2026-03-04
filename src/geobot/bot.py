@@ -27,6 +27,60 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 db = Database()
 
 
+def _fmt_int(value: int) -> str:
+    return f"{value:,}".replace(",", " ")
+
+
+def _sanitize_cell(value: str) -> str:
+    return value.replace("|", "\\|")
+
+
+def _build_table_lines(scores: list[tuple], is_daily: bool) -> list[str]:
+    if is_daily:
+        lines = ["# | Player | Score | 5k | 0s", "- | - | - | - | -"]
+        for index, row in enumerate(scores, start=1):
+            name = _sanitize_cell(str(row[0]))
+            total_score = _fmt_int(int(row[1]))
+            perfect_scores = row[2]
+            missed_scores = row[3]
+            lines.append(
+                f"{index} | {name} | {total_score} | {perfect_scores} | {missed_scores}"
+            )
+        return lines
+
+    lines = ["# | Player | Score | G | Avg | 5k | 0s", "- | - | - | - | - | - | -"]
+    for index, row in enumerate(scores, start=1):
+        name = _sanitize_cell(str(row[0]))
+        total_score = _fmt_int(int(row[1]))
+        games_played = row[2]
+        average_score = _fmt_int(int(row[3]))
+        perfect_scores = row[4]
+        missed_scores = row[5]
+        lines.append(
+            f"{index} | {name} | {total_score} | {games_played} | "
+            f"{average_score} | {perfect_scores} | {missed_scores}"
+        )
+    return lines
+
+
+def build_leaderboard_embed(
+    scores: list[tuple], game_id: str | None = None
+) -> discord.Embed:
+    is_daily = game_id is not None
+    title = "Today's Leaderboard" if is_daily else "Leaderboard"
+    embed = discord.Embed(title=title, color=discord.Color.blurple())
+
+    max_rows = 25
+    shown_scores = scores[:max_rows]
+    table_lines = _build_table_lines(shown_scores, is_daily=is_daily)
+    embed.description = "\n".join(table_lines)
+    if len(scores) > max_rows:
+        hidden_count = len(scores) - max_rows
+        embed.set_footer(text=f"Showing top {max_rows}. {hidden_count} more players.")
+
+    return embed
+
+
 def set_time(hour: int, minute: int) -> time:
     return time(hour=hour, minute=minute, tzinfo=ZoneInfo("Europe/Stockholm"))
 
@@ -60,7 +114,7 @@ async def fetch_todays_scores_task() -> None:
 async def post_daily_scores_task() -> None:
     try:
         game_id = db.get_latest_game_id()
-        scores = db.get_scores(game_id=game_id)
+        scores = db.get_scores_rows(game_id=game_id)
 
         channel_id_str = os.getenv("DISCORD_CHANNEL_ID")
         if channel_id_str is None:
@@ -70,8 +124,8 @@ async def post_daily_scores_task() -> None:
         channel = await bot.fetch_channel(channel_id)
 
         # Only send to text channels
-        if isinstance(channel, discord.TextChannel):
-            await channel.send(scores)
+        if isinstance(channel, discord.TextChannel) and scores:
+            await channel.send(embed=build_leaderboard_embed(scores, game_id=game_id))
 
     except Exception as e:
         print(f"Failed to post scores: {e}")
@@ -96,9 +150,9 @@ async def post_week_leaderboard() -> None:
 
         # Update scores before posting leaderboard
         await update_work_week_scores(db)
-        scores = db.get_scores(period="week", sort_by_avg=True)
+        scores = db.get_scores_rows(period="week", sort_by_avg=True)
         if scores:
-            await channel.send(scores)
+            await channel.send(embed=build_leaderboard_embed(scores))
         else:
             await channel.send("No scores available for this week.")
 
@@ -150,10 +204,12 @@ async def leaderboard(ctx: commands.Context, *args):
         game_id = db.get_latest_game_id()
 
     await update_todays_scores(db)
-    scores = db.get_scores(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
+    scores = db.get_scores_rows(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
 
     if scores:
-        await message.edit(content=scores)
+        await message.edit(
+            content=None, embed=build_leaderboard_embed(scores, game_id=game_id)
+        )
     else:
         await message.edit(content="No scores found.")
 
