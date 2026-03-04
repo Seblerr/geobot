@@ -6,8 +6,8 @@ import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
-from db import Database
-from game import (
+from .db import Database
+from .game import (
     create_game,
     fetch_game_scores,
     update_todays_scores,
@@ -94,6 +94,7 @@ async def post_week_leaderboard() -> None:
         if not isinstance(channel, discord.TextChannel):
             return
 
+        # Update scores before posting leaderboard
         await update_work_week_scores(db)
         scores = db.get_scores(period="week", sort_by_avg=True)
         if scores:
@@ -164,9 +165,13 @@ async def add_game(ctx: commands.Context, game_id: str):
     await ctx.send("Game added to the database.")
 
 
-if __name__ == "__main__":
+def main() -> None:
     token = os.getenv("DISCORD_TOKEN")
     if token is None:
         print("DISCORD_TOKEN environment variable not set")
     else:
         bot.run(token)
+
+
+if __name__ == "__main__":
+    main()

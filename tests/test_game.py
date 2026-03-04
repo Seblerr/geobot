@@ -1,10 +1,14 @@
 import sqlite3
+import sys
 import unittest
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from db import Database
-from game import update_work_week_scores
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from geobot.db import Database
+from geobot.game import update_work_week_scores
 
 
 class TestDatabase(unittest.TestCase):
@@ -117,7 +121,7 @@ class TestDatabase(unittest.TestCase):
             "Player2 should be listed before Player1",
         )
 
-    @patch("db.datetime.datetime")
+    @patch("geobot.db.datetime.datetime")
     def test_week_scores_exclude_weekend_games(self, mock_datetime):
         mock_datetime.now.return_value = datetime(2026, 3, 6, 20, 0, 0)
 
@@ -167,9 +171,9 @@ class TestGameWorkWeekUpdate(unittest.IsolatedAsyncioTestCase):
         self.conn.close()
         self.print_patcher.stop()
 
-    @patch("game.asyncio.sleep", new_callable=AsyncMock)
-    @patch("game.fetch_game_scores", new_callable=AsyncMock)
-    @patch("game.datetime.datetime")
+    @patch("geobot.game.asyncio.sleep", new_callable=AsyncMock)
+    @patch("geobot.game.fetch_game_scores", new_callable=AsyncMock)
+    @patch("geobot.game.datetime.datetime")
     async def test_update_work_week_scores_fetches_only_mon_to_fri(
         self,
         mock_datetime,

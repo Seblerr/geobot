@@ -1,9 +1,13 @@
+import sys
 import unittest
 from datetime import datetime, time
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
-import geobot
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+import geobot.bot as geobot_bot
 
 
 class FakeTextChannel:
@@ -20,7 +24,7 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
         self.print_patcher.stop()
 
     def test_set_time(self):
-        result = geobot.set_time(6, 0)
+        result = geobot_bot.set_time(6, 0)
         tzinfo = result.tzinfo
 
         self.assertIsInstance(result, time)
@@ -31,8 +35,8 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
         if isinstance(tzinfo, ZoneInfo):
             self.assertEqual(tzinfo.key, "Europe/Stockholm")
 
-    @patch("geobot.update_work_week_scores", new_callable=AsyncMock)
-    @patch("geobot.datetime")
+    @patch("geobot.bot.update_work_week_scores", new_callable=AsyncMock)
+    @patch("geobot.bot.datetime")
     async def test_weekly_post_skips_on_non_friday(
         self,
         mock_datetime,
@@ -40,14 +44,14 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
     ):
         mock_datetime.now.return_value = datetime(2026, 3, 5, 20, 0, 0)
 
-        await geobot.post_week_leaderboard.coro()
+        await geobot_bot.post_week_leaderboard.coro()
 
         mock_update_work_week_scores.assert_not_awaited()
 
-    @patch("geobot.discord.TextChannel", FakeTextChannel)
-    @patch("geobot.update_work_week_scores", new_callable=AsyncMock)
-    @patch("geobot.datetime")
-    @patch("geobot.os.getenv", return_value="123")
+    @patch("geobot.bot.discord.TextChannel", FakeTextChannel)
+    @patch("geobot.bot.update_work_week_scores", new_callable=AsyncMock)
+    @patch("geobot.bot.datetime")
+    @patch("geobot.bot.os.getenv", return_value="123")
     async def test_weekly_post_refreshes_then_posts_scores(
         self,
         _mock_getenv,
@@ -76,27 +80,27 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
         fake_db.get_scores.side_effect = get_scores_side_effect
 
         with (
-            patch.object(geobot, "db", fake_db),
+            patch.object(geobot_bot, "db", fake_db),
             patch.object(
-                geobot.bot,
+                geobot_bot.bot,
                 "fetch_channel",
                 AsyncMock(return_value=channel),
             ),
         ):
-            await geobot.post_week_leaderboard.coro()
+            await geobot_bot.post_week_leaderboard.coro()
 
         mock_update_work_week_scores.assert_awaited_once_with(fake_db)
         fake_db.get_scores.assert_called_once_with(period="week", sort_by_avg=True)
         channel.send.assert_awaited_once_with("weekly leaderboard")
         self.assertEqual(events, ["refresh", "scores", "send"])
 
-    @patch("geobot.update_todays_scores", new_callable=AsyncMock)
+    @patch("geobot.bot.update_todays_scores", new_callable=AsyncMock)
     async def test_fetch_todays_task_updates_today_only(
         self, mock_update_todays_scores
     ):
-        await geobot.fetch_todays_scores_task.coro()
+        await geobot_bot.fetch_todays_scores_task.coro()
 
-        mock_update_todays_scores.assert_awaited_once_with(geobot.db)
+        mock_update_todays_scores.assert_awaited_once_with(geobot_bot.db)
 
 
 if __name__ == "__main__":

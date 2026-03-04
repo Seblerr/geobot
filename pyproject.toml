@@ -19,6 +19,9 @@ dependencies = [
     "typing>=3.10.0.0",
 ]
 
+[project.scripts]
+geobot = "geobot.bot:main"
+
 [tool.ruff.lint]
 select = [
     # pycodestyle

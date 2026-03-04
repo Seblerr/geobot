@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import requests
 from dotenv import load_dotenv
 
-from db import Database
+from .db import Database
 
 # Map IDs
 I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
