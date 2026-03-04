@@ -1,9 +1,12 @@
-import os
-import requests
 import asyncio
 import datetime
-from db import Database
+import os
+from zoneinfo import ZoneInfo
+
+import requests
 from dotenv import load_dotenv
+
+from db import Database
 
 # Map IDs
 I_SAW_THE_SIGN_2 = "5cfda2c9bc79e16dd866104d"
@@ -100,16 +103,8 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
         session.close()
 
 
-async def update_missing_games_scores(db: Database) -> None:
-    game_ids = db.get_missing_game_ids()
-    for i, game_id in enumerate(game_ids):
-        await fetch_game_scores(db, game_id)
-
-        if i < len(game_ids) - 1:
-            await asyncio.sleep(10)
-
-
 async def update_todays_scores(db: Database) -> None:
+    """Fetch scores for the latest game (today's game)."""
     game_id = db.get_latest_game_id()
     if game_id is not None:
         await fetch_game_scores(db, game_id)
@@ -117,7 +112,7 @@ async def update_todays_scores(db: Database) -> None:
 
 async def update_work_week_scores(db: Database) -> None:
     """Fetch scores for all games created during the current work week (Monday-Friday)."""
-    today = datetime.date.today()
+    today = datetime.datetime.now(ZoneInfo("Europe/Stockholm")).date()
     monday = today - datetime.timedelta(days=today.weekday())
     friday = monday + datetime.timedelta(days=4)
 
@@ -135,9 +130,4 @@ async def update_work_week_scores(db: Database) -> None:
         await fetch_game_scores(db, game_id)
 
         if i < len(game_ids) - 1:
-            await asyncio.sleep(10)
-
-
-async def update_scores(db: Database) -> None:
-    await update_missing_games_scores(db)
-    await update_work_week_scores(db)
+            await asyncio.sleep(20)

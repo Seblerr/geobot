@@ -1,11 +1,18 @@
 import os
-import discord
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
+
+import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+
 from db import Database
-from game import create_game, update_scores, fetch_game_scores
+from game import (
+    create_game,
+    fetch_game_scores,
+    update_todays_scores,
+    update_work_week_scores,
+)
 
 PERIODS = ["today", "week", "weekly", "all"]
 SORTS = ["avg", "average"]
@@ -27,8 +34,13 @@ def set_time(hour: int, minute: int) -> time:
 @tasks.loop(time=set_time(6, 0))
 async def create_game_task() -> None:
     link = create_game(db)
-    channel = getattr(bot, "channel", None)
-    if channel is not None and hasattr(channel, "send"):
+    channel_id_str = os.getenv("DISCORD_CHANNEL_ID")
+    if channel_id_str is None:
+        print("DISCORD_CHANNEL_ID environment variable not set")
+        return
+
+    channel = await bot.fetch_channel(int(channel_id_str))
+    if isinstance(channel, discord.TextChannel):
         await channel.send(link or "Couldn't generate challenge game.")
 
 
@@ -39,13 +51,13 @@ def set_swedish_time(hour: int, minute: int) -> time:
 
 
 @tasks.loop(time=set_time(23, 45))
-async def fetch_scores_task() -> None:
-    print("Fetching missing game scores...")
-    await update_scores(db)
+async def fetch_todays_scores_task() -> None:
+    print("Fetching today's game scores...")
+    await update_todays_scores(db)
 
 
 @tasks.loop(time=set_time(23, 59))
-async def post_scores_task() -> None:
+async def post_daily_scores_task() -> None:
     try:
         game_id = db.get_latest_game_id()
         scores = db.get_scores(game_id=game_id)
@@ -58,28 +70,37 @@ async def post_scores_task() -> None:
         channel = await bot.fetch_channel(channel_id)
 
         # Only send to text channels
-        if hasattr(channel, "send"):
+        if isinstance(channel, discord.TextChannel):
             await channel.send(scores)
+
     except Exception as e:
         print(f"Failed to post scores: {e}")
 
 
-@tasks.loop(time=set_time(17, 0))
+@tasks.loop(time=set_time(20, 0))
 async def post_week_leaderboard() -> None:
     now = datetime.now(ZoneInfo("Europe/Stockholm"))
-    if now.weekday() != 4:
+    if now.weekday() != 4:  # Only post on Fridays
         return
-
-    channel = getattr(bot, "channel", None)
-    if channel is None or not hasattr(channel, "send"):
-        return
-
     try:
+        channel_id_str = os.getenv("DISCORD_CHANNEL_ID")
+        if channel_id_str is None:
+            print("DISCORD_CHANNEL_ID environment variable not set")
+            return
+        channel_id = int(channel_id_str)
+        channel = await bot.fetch_channel(channel_id)
+
+        # Only send to text channels
+        if not isinstance(channel, discord.TextChannel):
+            return
+
+        await update_work_week_scores(db)
         scores = db.get_scores(period="week", sort_by_avg=True)
         if scores:
             await channel.send(scores)
         else:
             await channel.send("No scores available for this week.")
+
     except Exception as e:
         print(f"Failed to post weekly leaderboard: {e}")
 
@@ -88,13 +109,11 @@ async def post_week_leaderboard() -> None:
 async def on_ready() -> None:
     print(f"We have logged in as {bot.user}")
 
-    if channel_id_str := os.getenv("DISCORD_CHANNEL_ID"):
-        setattr(bot, "channel", await bot.fetch_channel(int(channel_id_str)))
-
+    if os.getenv("DISCORD_CHANNEL_ID"):
         for task in [
             create_game_task,
-            fetch_scores_task,
-            post_scores_task,
+            fetch_todays_scores_task,
+            post_daily_scores_task,
             post_week_leaderboard,
         ]:
             if not task.is_running():
@@ -129,7 +148,7 @@ async def leaderboard(ctx: commands.Context, *args):
     if period == "today":
         game_id = db.get_latest_game_id()
 
-    await update_scores(db)
+    await update_todays_scores(db)
     scores = db.get_scores(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
 
     if scores:

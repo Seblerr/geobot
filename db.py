@@ -1,6 +1,8 @@
-import sqlite3
 import datetime
+import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
+from zoneinfo import ZoneInfo
 
 
 class Database:
@@ -39,6 +41,18 @@ class Database:
                 FOREIGN KEY (player_id) REFERENCES players(id)
             )
             """)
+            conn.commit()
+
+    @contextmanager
+    def db_connection(self) -> Iterator[sqlite3.Connection]:
+        if self.conn is not None:
+            yield self.conn
+        else:
+            conn = sqlite3.connect("database.db")
+            try:
+                yield conn
+            finally:
+                conn.close()
 
     def upsert_player(self, account_id: str, name: str) -> int:
         with self.db_connection() as conn:
@@ -97,25 +111,12 @@ class Database:
             if cursor.rowcount > 0:
                 print("Scores added to the database.")
 
-    def get_missing_game_ids(self) -> list[str]:
-        with self.db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT g.game_id
-                FROM games g
-                LEFT JOIN scores s ON g.game_id = s.game_id
-                WHERE s.game_id IS NULL
-                """
-            )
-            return [row[0] for row in cursor.fetchall()]
-
     def get_scores(
         self,
         game_id: str | None = None,
         period: str | None = None,
         sort_by_avg: bool = False,
-    ) -> str | None:
+    ) -> str:
         with self.db_connection() as conn:
             cursor = conn.cursor()
 
@@ -127,10 +128,9 @@ class Database:
                 cursor.execute(query, date)
             scores = cursor.fetchall()
 
-            if not scores:
-                return None
-
-            return self._format_table(scores, game_id=game_id)
+        if not scores:
+            return ""
+        return self._format_table(scores, game_id=game_id)
 
     def _get_game_scores_query(self) -> str:
         return """
@@ -142,7 +142,7 @@ class Database:
             FROM scores s
             JOIN players p ON s.player_id = p.id
             WHERE s.game_id = ?
-            GROUP BY p.name
+            GROUP BY p.id, p.name
             ORDER BY total_score DESC
         """
 
@@ -164,7 +164,7 @@ class Database:
 
         date_range: tuple = ()
         if period in {"week", "weekly"}:
-            today = datetime.date.today()
+            today = datetime.datetime.now(ZoneInfo("Europe/Stockholm")).date()
             monday = today - datetime.timedelta(days=today.weekday())
             friday = monday + datetime.timedelta(days=4)
 
@@ -173,7 +173,7 @@ class Database:
 
         order_by = "average_score DESC" if sort_by_avg else "total_score DESC"
         query += f"""
-            GROUP BY p.name
+            GROUP BY p.id, p.name
             ORDER BY {order_by}
         """
 
@@ -192,7 +192,8 @@ class Database:
 
         padding = 2
         col_widths = [
-            max(len(str(cell)) for cell in col) + padding for col in zip(*all_rows)
+            max(len(str(cell)) for cell in col) + padding
+            for col in zip(*all_rows, strict=False)
         ]
 
         format_specs = (
@@ -226,14 +227,3 @@ class Database:
             print(f"Contents of the '{table_name}' table:")
             for row in rows:
                 print(row)
-
-    @contextmanager
-    def db_connection(self):
-        if self.conn:
-            yield self.conn
-        else:
-            conn = sqlite3.connect("database.db")
-            try:
-                yield conn
-            finally:
-                conn.close()
