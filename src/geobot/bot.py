@@ -236,7 +236,9 @@ async def leaderboard(ctx: commands.Context, *args):
         game_id = db.get_latest_game_id()
 
     if period in WEEK_PERIODS:
+        print("[leaderboard] Weekly command refresh started")
         await update_work_week_scores(db)
+        print("[leaderboard] Weekly command refresh finished")
     else:
         await update_todays_scores(db)
 
