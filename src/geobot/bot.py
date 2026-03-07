@@ -123,12 +123,6 @@ async def create_game_task() -> None:
         await channel.send(link or "Couldn't generate challenge game.")
 
 
-def set_swedish_time(hour: int, minute: int) -> time:
-    # Set time in Swedish timezone (CET/CEST)
-    swedish_tz = ZoneInfo("Europe/Stockholm")
-    return time(hour=hour, minute=minute, tzinfo=swedish_tz)
-
-
 @tasks.loop(time=set_time(23, 45))
 async def fetch_todays_scores_task() -> None:
     print("Fetching today's game scores...")

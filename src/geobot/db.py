@@ -103,22 +103,6 @@ class Database:
             if cursor.rowcount > 0:
                 print("Scores added to the database.")
 
-    def get_scores(
-        self,
-        game_id: str | None = None,
-        period: str | None = None,
-        sort_by_avg: bool = False,
-    ) -> str:
-        scores = self.get_scores_rows(
-            game_id=game_id,
-            period=period,
-            sort_by_avg=sort_by_avg,
-        )
-
-        if not scores:
-            return ""
-        return self._format_table(scores, game_id=game_id)
-
     def get_scores_rows(
         self,
         game_id: str | None = None,
@@ -171,7 +155,7 @@ class Database:
             monday = today - datetime.timedelta(days=today.weekday())
             friday = monday + datetime.timedelta(days=4)
 
-            query += "WHERE DATE(g.created_at) BETWEEN ? AND ?"
+            query += "WHERE DATE(g.created_at, 'localtime') BETWEEN ? AND ?"
             date_range = (monday.isoformat(), friday.isoformat())
 
         order_by = "average_score DESC" if sort_by_avg else "total_score DESC"
@@ -181,43 +165,6 @@ class Database:
         """
 
         return (query, date_range)
-
-    def _format_table(self, scores: list[tuple], game_id: str | None = None) -> str:
-        if game_id:
-            title = "Today's Leaderboard"
-            columns = ["Player", "Score", "5000s", "0s"]
-        else:
-            title = "Leaderboard"
-            columns = ["Player", "Score", "# Games", "Avg Score", "5000s", "0s"]
-
-        str_rows = [[self._fmt_num(value) for value in row] for row in scores]
-        all_rows = [columns] + str_rows
-
-        padding = 2
-        col_widths = [max(len(str(cell)) for cell in col) + padding for col in zip(*all_rows, strict=False)]
-
-        format_specs = (
-            [
-                f"{{:<{col_widths[0]}}}"  # Left-align player names
-            ]
-            + [
-                f"{{:>{width}}}"
-                for width in col_widths[1:]  # Right-align numbers
-            ]
-        )
-        fmt = "".join(format_specs)
-
-        header = fmt.format(*columns)
-        separator = "-" * len(header)
-        data_rows = [fmt.format(*row) for row in str_rows]
-
-        table_content = "\n".join([header, separator] + data_rows)
-        return f"**{title}**\n\n```\n{table_content}\n```"
-
-    def _fmt_num(self, value):
-        if isinstance(value, int):
-            return f"{value:,}".replace(",", " ")
-        return value
 
     def print_table(self, table_name: str) -> None:
         with self.db_connection() as conn:

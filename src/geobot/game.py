@@ -115,7 +115,7 @@ async def update_work_week_scores(db: Database, delay_seconds: float = 20.0) -> 
     with db.db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT game_id FROM games WHERE DATE(created_at) BETWEEN ? AND ?",
+            "SELECT game_id FROM games WHERE DATE(created_at, 'localtime') BETWEEN ? AND ?",
             (monday.isoformat(), friday.isoformat()),
         )
         game_ids = [row[0] for row in cursor.fetchall()]

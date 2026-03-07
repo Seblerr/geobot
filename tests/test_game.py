@@ -76,37 +76,22 @@ class TestDatabase(unittest.TestCase):
             self.assertEqual(scores[0][4], 3000)
 
     def test_get_scores_from_game(self):
-        scores = self.db.get_scores("game_id", None, False)
+        scores = self.db.get_scores_rows("game_id", None, False)
 
-        player1_position = scores.find("player1")
-        player2_position = scores.find("player2")
-
-        self.assertTrue(
-            player1_position < player2_position,
-            "Player1 should be listed before Player2",
-        )
+        self.assertEqual(scores[0][0], "player1")
+        self.assertEqual(scores[1][0], "player2")
 
     def test_get_scores_sort_by_total(self):
-        scores = self.db.get_scores(None, None, False)
+        scores = self.db.get_scores_rows(None, None, False)
 
-        player1_position = scores.find("player1")
-        player2_position = scores.find("player2")
-
-        self.assertTrue(
-            player1_position < player2_position,
-            "Player1 should be listed before Player2",
-        )
+        self.assertEqual(scores[0][0], "player1")
+        self.assertEqual(scores[1][0], "player2")
 
     def test_get_scores_sort_by_avg(self):
-        scores = self.db.get_scores(None, None, True)
+        scores = self.db.get_scores_rows(None, None, True)
 
-        player1_position = scores.find("player1")
-        player2_position = scores.find("player2")
-
-        self.assertTrue(
-            player2_position < player1_position,
-            "Player2 should be listed before Player1",
-        )
+        self.assertEqual(scores[0][0], "player2")
+        self.assertEqual(scores[1][0], "player1")
 
     @patch("geobot.db.datetime.datetime")
     def test_get_week_scores_sort_by_total_by_default(self, mock_datetime):
@@ -132,15 +117,10 @@ class TestDatabase(unittest.TestCase):
             )
             conn.commit()
 
-        scores = self.db.get_scores(None, "week", False)
+        scores = self.db.get_scores_rows(None, "week", False)
 
-        player1_position = scores.find("player1")
-        player2_position = scores.find("player2")
-
-        self.assertTrue(
-            player1_position < player2_position,
-            "Player1 should be listed before Player2",
-        )
+        self.assertEqual(scores[0][0], "player1")
+        self.assertEqual(scores[1][0], "player2")
 
     @patch("geobot.db.datetime.datetime")
     def test_week_scores_exclude_weekend_games(self, mock_datetime):
@@ -174,10 +154,11 @@ class TestDatabase(unittest.TestCase):
             )
             conn.commit()
 
-        scores = self.db.get_scores(period="week")
+        scores = self.db.get_scores_rows(period="week")
+        names = [row[0] for row in scores]
 
-        self.assertIn("weekday_player", scores)
-        self.assertNotIn("weekend_player", scores)
+        self.assertIn("weekday_player", names)
+        self.assertNotIn("weekend_player", names)
 
 
 class TestGameWorkWeekUpdate(unittest.IsolatedAsyncioTestCase):
