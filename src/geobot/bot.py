@@ -257,7 +257,7 @@ async def leaderboard(ctx: commands.Context, *args):
         if scores:
             print("[leaderboard] Editing status message with embed")
             await message.edit(
-                content=None,
+                content="Leaderboard loaded.",
                 embed=build_leaderboard_embed(scores, game_id=game_id),
             )
         else:
