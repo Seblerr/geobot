@@ -231,23 +231,46 @@ async def leaderboard(ctx: commands.Context, *args):
 
     message = await ctx.send("Fetching leaderboard, please wait... 🕐")
 
-    game_id = None
-    if period == "today":
-        game_id = db.get_latest_game_id()
+    try:
+        game_id = None
+        if period == "today":
+            game_id = db.get_latest_game_id()
 
-    if period in WEEK_PERIODS:
-        print("[leaderboard] Weekly command refresh started")
-        await update_work_week_scores(db)
-        print("[leaderboard] Weekly command refresh finished")
-    else:
-        await update_todays_scores(db)
+        if period in WEEK_PERIODS:
+            print("[leaderboard] Weekly command refresh started")
+            await update_work_week_scores(db)
+            print("[leaderboard] Weekly command refresh finished")
+        else:
+            await update_todays_scores(db)
 
-    scores = db.get_scores_rows(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
+        print(
+            "[leaderboard] Querying leaderboard rows "
+            f"period={period} sort_by_avg={sort_by_avg} game_id={game_id}"
+        )
+        scores = db.get_scores_rows(
+            game_id=game_id,
+            period=period,
+            sort_by_avg=sort_by_avg,
+        )
+        print(f"[leaderboard] Retrieved {len(scores)} rows")
 
-    if scores:
-        await message.edit(embed=build_leaderboard_embed(scores, game_id=game_id))
-    else:
-        await message.edit(content="No scores found.")
+        if scores:
+            print("[leaderboard] Editing status message with embed")
+            await message.edit(embed=build_leaderboard_embed(scores, game_id=game_id))
+        else:
+            print("[leaderboard] No rows found")
+            await message.edit(content="No scores found.")
+
+        print("[leaderboard] Command completed")
+    except Exception as e:
+        print(f"[leaderboard] Command failed: {e}")
+        try:
+            await message.edit(content=f"Failed to fetch leaderboard: {e}")
+        except Exception as edit_error:
+            print(
+                f"[leaderboard] Failed to edit status message with error: {edit_error}"
+            )
+        raise
 
 
 @bot.command()
