@@ -2,6 +2,7 @@ import sys
 import unittest
 from datetime import datetime, time
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -103,6 +104,58 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
         await geobot_bot.fetch_todays_scores_task.coro()
 
         mock_update_todays_scores.assert_awaited_once_with(geobot_bot.db)
+
+    @patch("geobot.bot.update_todays_scores", new_callable=AsyncMock)
+    @patch("geobot.bot.update_work_week_scores", new_callable=AsyncMock)
+    async def test_leaderboard_week_refreshes_work_week_scores(
+        self,
+        mock_update_work_week_scores,
+        mock_update_todays_scores,
+    ):
+        message = AsyncMock()
+        ctx = MagicMock()
+        ctx.send = AsyncMock(return_value=message)
+
+        fake_db = MagicMock()
+        fake_db.get_scores_rows.return_value = [("player", 12345, 3, 4115, 2, 0)]
+        leaderboard_callback = cast(Any, geobot_bot.leaderboard.callback)
+
+        with patch.object(geobot_bot, "db", fake_db):
+            await leaderboard_callback(ctx, "week")
+
+        mock_update_work_week_scores.assert_awaited_once_with(fake_db)
+        mock_update_todays_scores.assert_not_awaited()
+        fake_db.get_scores_rows.assert_called_once_with(
+            game_id=None,
+            period="week",
+            sort_by_avg=False,
+        )
+
+    @patch("geobot.bot.update_todays_scores", new_callable=AsyncMock)
+    @patch("geobot.bot.update_work_week_scores", new_callable=AsyncMock)
+    async def test_leaderboard_default_refreshes_todays_scores(
+        self,
+        mock_update_work_week_scores,
+        mock_update_todays_scores,
+    ):
+        message = AsyncMock()
+        ctx = MagicMock()
+        ctx.send = AsyncMock(return_value=message)
+
+        fake_db = MagicMock()
+        fake_db.get_scores_rows.return_value = [("player", 12345, 3, 4115, 2, 0)]
+        leaderboard_callback = cast(Any, geobot_bot.leaderboard.callback)
+
+        with patch.object(geobot_bot, "db", fake_db):
+            await leaderboard_callback(ctx)
+
+        mock_update_todays_scores.assert_awaited_once_with(fake_db)
+        mock_update_work_week_scores.assert_not_awaited()
+        fake_db.get_scores_rows.assert_called_once_with(
+            game_id=None,
+            period=None,
+            sort_by_avg=False,
+        )
 
 
 if __name__ == "__main__":

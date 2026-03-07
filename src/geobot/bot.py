@@ -16,6 +16,7 @@ from .game import (
 
 PERIODS = ["today", "week", "weekly", "all"]
 SORTS = ["avg", "average"]
+WEEK_PERIODS = {"week", "weekly"}
 
 load_dotenv()
 
@@ -234,7 +235,11 @@ async def leaderboard(ctx: commands.Context, *args):
     if period == "today":
         game_id = db.get_latest_game_id()
 
-    await update_todays_scores(db)
+    if period in WEEK_PERIODS:
+        await update_work_week_scores(db)
+    else:
+        await update_todays_scores(db)
+
     scores = db.get_scores_rows(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
 
     if scores:
