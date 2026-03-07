@@ -243,9 +243,7 @@ async def leaderboard(ctx: commands.Context, *args):
     scores = db.get_scores_rows(game_id=game_id, period=period, sort_by_avg=sort_by_avg)
 
     if scores:
-        await message.edit(
-            content=None, embed=build_leaderboard_embed(scores, game_id=game_id)
-        )
+        await message.edit(embed=build_leaderboard_embed(scores, game_id=game_id))
     else:
         await message.edit(content="No scores found.")
 
