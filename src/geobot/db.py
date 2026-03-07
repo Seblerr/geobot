@@ -90,22 +90,14 @@ class Database:
             else:
                 return None
 
-    def add_scores(
-        self, game_id: str, scoresheet: list[tuple[str, str, int, int]]
-    ) -> None:
+    def add_scores(self, game_id: str, scoresheet: list[tuple[str, str, int, int]]) -> None:
         with self.db_connection() as conn:
-            player_ids = {
-                account_id: self.upsert_player(account_id, name)
-                for account_id, name, _, _ in scoresheet
-            }
+            player_ids = {account_id: self.upsert_player(account_id, name) for account_id, name, _, _ in scoresheet}
 
             cursor = conn.cursor()
             cursor.executemany(
                 "INSERT OR IGNORE INTO scores (game_id, player_id, round_number, score) VALUES (?, ?, ?, ?)",
-                [
-                    (game_id, player_ids[account_id], round_num, score)
-                    for account_id, _, round_num, score in scoresheet
-                ],
+                [(game_id, player_ids[account_id], round_num, score) for account_id, _, round_num, score in scoresheet],
             )
             conn.commit()
             if cursor.rowcount > 0:
@@ -159,9 +151,7 @@ class Database:
             ORDER BY total_score DESC
         """
 
-    def _get_scores_query(
-        self, period: str | None, sort_by_avg: bool
-    ) -> tuple[str, tuple]:
+    def _get_scores_query(self, period: str | None, sort_by_avg: bool) -> tuple[str, tuple]:
         query = """
             SELECT
                 p.name,
@@ -204,10 +194,7 @@ class Database:
         all_rows = [columns] + str_rows
 
         padding = 2
-        col_widths = [
-            max(len(str(cell)) for cell in col) + padding
-            for col in zip(*all_rows, strict=False)
-        ]
+        col_widths = [max(len(str(cell)) for cell in col) + padding for col in zip(*all_rows, strict=False)]
 
         format_specs = (
             [

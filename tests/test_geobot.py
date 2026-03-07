@@ -91,16 +91,12 @@ class TestGeoBotTasks(unittest.IsolatedAsyncioTestCase):
             await geobot_bot.post_week_leaderboard.coro()
 
         mock_update_work_week_scores.assert_awaited_once_with(fake_db)
-        fake_db.get_scores_rows.assert_called_once_with(
-            period="week", sort_by_avg=False
-        )
+        fake_db.get_scores_rows.assert_called_once_with(period="week", sort_by_avg=False)
         channel.send.assert_awaited_once()
         self.assertEqual(events, ["refresh", "scores", "send"])
 
     @patch("geobot.bot.update_todays_scores", new_callable=AsyncMock)
-    async def test_fetch_todays_task_updates_today_only(
-        self, mock_update_todays_scores
-    ):
+    async def test_fetch_todays_task_updates_today_only(self, mock_update_todays_scores):
         await geobot_bot.fetch_todays_scores_task.coro()
 
         mock_update_todays_scores.assert_awaited_once_with(geobot_bot.db)

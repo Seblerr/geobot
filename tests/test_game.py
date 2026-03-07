@@ -57,9 +57,7 @@ class TestDatabase(unittest.TestCase):
         self.conn.close()
         self.print_patcher.stop()
 
-    def _add_game_with_scores(
-        self, game_id: str, scoresheet: list[tuple[str, str, int, int]]
-    ) -> None:
+    def _add_game_with_scores(self, game_id: str, scoresheet: list[tuple[str, str, int, int]]) -> None:
         self.db.add_game(game_id)
         self.db.add_scores(game_id, scoresheet)
 

@@ -74,9 +74,7 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
             return
         session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
 
-        res = session.get(
-            f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
-        )
+        res = session.get(f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}")
         res.raise_for_status()
 
         for item in res.json().get("items", []):
@@ -90,9 +88,7 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
                 continue
 
             round_scores = [round.get("roundScoreInPoints") for round in guesses]
-            scores = [
-                (account_id, nick, i + 1, score) for i, score in enumerate(round_scores)
-            ]
+            scores = [(account_id, nick, i + 1, score) for i, score in enumerate(round_scores)]
 
             db.add_scores(game_id, scores)
 
@@ -124,10 +120,7 @@ async def update_work_week_scores(db: Database, delay_seconds: float = 20.0) -> 
         )
         game_ids = [row[0] for row in cursor.fetchall()]
 
-    print(
-        "Refreshing weekly scores for "
-        f"{len(game_ids)} games ({monday.isoformat()} to {friday.isoformat()})"
-    )
+    print(f"Refreshing weekly scores for {len(game_ids)} games ({monday.isoformat()} to {friday.isoformat()})")
 
     # Fetch scores for each game
     for i, game_id in enumerate(game_ids):

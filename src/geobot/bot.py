@@ -73,9 +73,7 @@ def _build_table_lines(scores: list[tuple], is_daily: bool) -> list[str]:
         headers = ["#", "Player", "Score", "G", "Avg", "5k", "0s"]
 
     all_rows = [headers] + rows
-    col_widths = [
-        max(len(str(cell)) for cell in col) for col in zip(*all_rows, strict=False)
-    ]
+    col_widths = [max(len(str(cell)) for cell in col) for col in zip(*all_rows, strict=False)]
 
     def _fmt_row(row: list[str]) -> str:
         return "  ".join(
@@ -83,10 +81,7 @@ def _build_table_lines(scores: list[tuple], is_daily: bool) -> list[str]:
                 f"{row[0]:>{col_widths[0]}}",
                 f"{row[1]:<{col_widths[1]}}",
             ]
-            + [
-                f"{cell:>{col_widths[idx]}}"
-                for idx, cell in enumerate(row[2:], start=2)
-            ]
+            + [f"{cell:>{col_widths[idx]}}" for idx, cell in enumerate(row[2:], start=2)]
         )
 
     header = _fmt_row(headers)
@@ -95,9 +90,7 @@ def _build_table_lines(scores: list[tuple], is_daily: bool) -> list[str]:
     return [header, separator] + body
 
 
-def build_leaderboard_embed(
-    scores: list[tuple], game_id: str | None = None
-) -> discord.Embed:
+def build_leaderboard_embed(scores: list[tuple], game_id: str | None = None) -> discord.Embed:
     is_daily = game_id is not None
     title = "Today's Leaderboard" if is_daily else "Leaderboard"
     embed = discord.Embed(title=title, color=discord.Color.blurple())
@@ -224,9 +217,7 @@ async def leaderboard(ctx: commands.Context, *args):
 
     if invalid_args:
         valid_options = f"Valid options: {', '.join(PERIODS + SORTS)}"
-        await ctx.send(
-            f"Invalid arguments: `{', '.join(invalid_args)}`\n{valid_options}"
-        )
+        await ctx.send(f"Invalid arguments: `{', '.join(invalid_args)}`\n{valid_options}")
         return
 
     message = await ctx.send("Fetching leaderboard, please wait... 🕐")
