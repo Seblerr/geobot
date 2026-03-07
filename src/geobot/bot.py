@@ -237,43 +237,29 @@ async def leaderboard(ctx: commands.Context, *args):
             game_id = db.get_latest_game_id()
 
         if period in WEEK_PERIODS:
-            print("[leaderboard] Weekly command refresh started")
             await update_work_week_scores(db)
-            print("[leaderboard] Weekly command refresh finished")
         else:
             await update_todays_scores(db)
 
-        print(
-            "[leaderboard] Querying leaderboard rows "
-            f"period={period} sort_by_avg={sort_by_avg} game_id={game_id}"
-        )
         scores = db.get_scores_rows(
             game_id=game_id,
             period=period,
             sort_by_avg=sort_by_avg,
         )
-        print(f"[leaderboard] Retrieved {len(scores)} rows")
 
         if scores:
-            print("[leaderboard] Editing status message with embed")
             await message.edit(
-                content="Leaderboard loaded.",
+                content=None,
                 embed=build_leaderboard_embed(scores, game_id=game_id),
             )
         else:
-            print("[leaderboard] No rows found")
             await message.edit(content="No scores found.")
-
-        print("[leaderboard] Command completed")
     except Exception as e:
-        print(f"[leaderboard] Command failed: {e}")
+        print(f"Failed to fetch leaderboard: {e}")
         try:
             await message.edit(content=f"Failed to fetch leaderboard: {e}")
         except Exception as edit_error:
-            print(
-                f"[leaderboard] Failed to edit status message with error: {edit_error}"
-            )
-        raise
+            print(f"Failed to edit leaderboard status message: {edit_error}")
 
 
 @bot.command()

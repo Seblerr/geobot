@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import os
-from time import perf_counter
 from zoneinfo import ZoneInfo
 
 import requests
@@ -75,22 +74,12 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
             return
         session.cookies.set("_ncfa", token, domain="www.geoguessr.com")
 
-        url = f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
-        print(f"[scores] Fetching highscores for game {game_id}: {url}")
-        started_at = perf_counter()
-
-        res = session.get(url)
-        elapsed = perf_counter() - started_at
-        print(
-            f"[scores] Received highscores for game {game_id}: "
-            f"status={res.status_code} elapsed={elapsed:.2f}s"
+        res = session.get(
+            f"https://www.geoguessr.com/api/v3/results/highscores/{game_id}"
         )
         res.raise_for_status()
 
-        items = res.json().get("items", [])
-        print(f"[scores] Processing {len(items)} score entries for game {game_id}")
-
-        for item in items:
+        for item in res.json().get("items", []):
             player = item.get("game").get("player")
             nick = player.get("nick")
             account_id = player.get("id")
@@ -107,10 +96,8 @@ async def fetch_game_scores(db: Database, game_id: str) -> None:
 
             db.add_scores(game_id, scores)
 
-        print(f"[scores] Finished processing game {game_id}")
-
     except requests.exceptions.RequestException as e:
-        print(f"Request failed: {e}")
+        print(f"Request failed for game {game_id}: {e}")
 
     finally:
         session.close()
@@ -128,11 +115,6 @@ async def update_work_week_scores(db: Database, delay_seconds: float = 20.0) -> 
     today = datetime.datetime.now(ZoneInfo("Europe/Stockholm")).date()
     monday = today - datetime.timedelta(days=today.weekday())
     friday = monday + datetime.timedelta(days=4)
-    print(
-        f"[weekly] Refreshing work-week scores for {monday.isoformat()} to "
-        f"{friday.isoformat()}"
-    )
-
     # Get games created during the work week
     with db.db_connection() as conn:
         cursor = conn.cursor()
@@ -142,15 +124,14 @@ async def update_work_week_scores(db: Database, delay_seconds: float = 20.0) -> 
         )
         game_ids = [row[0] for row in cursor.fetchall()]
 
-    print(f"[weekly] Found {len(game_ids)} games to refresh")
+    print(
+        "Refreshing weekly scores for "
+        f"{len(game_ids)} games ({monday.isoformat()} to {friday.isoformat()})"
+    )
 
     # Fetch scores for each game
     for i, game_id in enumerate(game_ids):
-        print(f"[weekly] [{i + 1}/{len(game_ids)}] Refreshing game {game_id}")
         await fetch_game_scores(db, game_id)
 
         if i < len(game_ids) - 1:
-            print(f"[weekly] Sleeping {delay_seconds}s before next game")
             await asyncio.sleep(delay_seconds)
-
-    print(f"[weekly] Finished refreshing {len(game_ids)} games")
