@@ -110,15 +110,38 @@ class TestDatabase(unittest.TestCase):
             "Player2 should be listed before Player1",
         )
 
-    def test_get_week_scores_sorted_by_avg(self):
-        scores = self.db.get_scores(None, "week", True)
+    @patch("geobot.db.datetime.datetime")
+    def test_get_week_scores_sort_by_total_by_default(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2026, 3, 6, 20, 0, 0)
+
+        with self.db.db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE games SET created_at = ? WHERE game_id = ?",
+                ("2026-03-03 12:00:00", "game_id"),
+            )
+            cursor.execute(
+                "UPDATE games SET created_at = ? WHERE game_id = ?",
+                ("2026-03-04 12:00:00", "game_id2"),
+            )
+            cursor.execute(
+                "UPDATE games SET created_at = ? WHERE game_id = ?",
+                ("2026-03-05 12:00:00", "game_id3"),
+            )
+            cursor.execute(
+                "UPDATE games SET created_at = ? WHERE game_id = ?",
+                ("2026-03-06 12:00:00", "game_id4"),
+            )
+            conn.commit()
+
+        scores = self.db.get_scores(None, "week", False)
 
         player1_position = scores.find("player1")
         player2_position = scores.find("player2")
 
         self.assertTrue(
-            player2_position < player1_position,
-            "Player2 should be listed before Player1",
+            player1_position < player2_position,
+            "Player1 should be listed before Player2",
         )
 
     @patch("geobot.db.datetime.datetime")
